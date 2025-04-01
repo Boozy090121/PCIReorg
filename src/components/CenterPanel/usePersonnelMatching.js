@@ -5,32 +5,53 @@ import { selectPersonnelByFactory } from '../../features/personnelSlice';
 
 export const usePersonnelMatching = (node, factory, phase) => {
   const dispatch = useDispatch();
+  
+  // Add safety check for required props
+  if (!node || !factory || !phase) {
+    console.warn('usePersonnelMatching: Missing required props', { node, factory, phase });
+    return {
+      matchingSuggestionsOpen: false,
+      openMatchingSuggestions: () => {},
+      closeMatchingSuggestions: () => {},
+      handleAssignPersonnel: () => {},
+      getPotentialMatchCount: () => 0
+    };
+  }
+
   const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
-  const personnel = useSelector(state => selectPersonnelByFactory(state, factory));
+  const personnel = useSelector(state => selectPersonnelByFactory(state, factory)) || [];
   
   const getPotentialMatchCount = (assignedRoles) => {
-    if (!assignedRoles || assignedRoles.length === 0) return 0;
+    // Safety check for undefined/null inputs
+    if (!Array.isArray(assignedRoles) || assignedRoles.length === 0) return 0;
+    if (!Array.isArray(personnel)) return 0;
     
-    // Extract all required skills from assigned roles
+    // Ensure node.personnel is an array
+    const nodePersonnel = Array.isArray(node.personnel) ? node.personnel : [];
+    
+    // Extract all required skills from assigned roles with additional safety checks
     const requiredSkills = new Set();
     assignedRoles.forEach(role => {
-      if (role.skills) {
-        role.skills.forEach(skill => requiredSkills.add(skill));
+      if (role && Array.isArray(role.skills)) {
+        role.skills.forEach(skill => {
+          if (skill) requiredSkills.add(skill);
+        });
       }
     });
     
     // If no skills required, all unassigned personnel are potential matches
     if (requiredSkills.size === 0) {
-      return personnel.filter(person => !node.personnel?.includes(person.id)).length;
+      return personnel.filter(person => person && !nodePersonnel.includes(person.id)).length;
     }
     
     // Count unassigned personnel with at least one matching skill
     return personnel.filter(person => {
-      if (node.personnel?.includes(person.id)) return false; // Skip if already assigned
-      if (!person.skills || person.skills.length === 0) return false; // Skip if no skills
+      if (!person) return false;
+      if (nodePersonnel.includes(person.id)) return false; // Skip if already assigned
+      if (!Array.isArray(person.skills) || person.skills.length === 0) return false; // Skip if no skills
       
       // Check if any skills match
-      return person.skills.some(skill => requiredSkills.has(skill));
+      return person.skills.some(skill => skill && requiredSkills.has(skill));
     }).length;
   };
   
@@ -43,8 +64,16 @@ export const usePersonnelMatching = (node, factory, phase) => {
   };
   
   const handleAssignPersonnel = (person) => {
+    if (!person || !person.id) {
+      console.warn('handleAssignPersonnel: Invalid person object', person);
+      return;
+    }
+    
+    // Ensure node.personnel is an array
+    const currentPersonnel = Array.isArray(node.personnel) ? node.personnel : [];
+    
     // Add the personnel ID to the node's personnel array
-    const updatedPersonnel = node.personnel ? [...node.personnel, person.id] : [person.id];
+    const updatedPersonnel = [...currentPersonnel, person.id];
     
     // Create updated node
     const updatedNode = {
@@ -59,7 +88,7 @@ export const usePersonnelMatching = (node, factory, phase) => {
       node: updatedNode
     }));
     
-    // Close the dialog after assigning
+    // Close the suggestions dialog
     closeMatchingSuggestions();
   };
   

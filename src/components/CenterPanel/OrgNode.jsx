@@ -34,12 +34,23 @@ const OrgNode = ({
   isHighlighted = false
 }) => {
   const dispatch = useDispatch();
-  const roles = useSelector(state => selectRolesByFactory(state, factory));
-  const personnel = useSelector(state => selectPersonnelByFactory(state, factory));
   
-  // Find assigned roles and personnel
-  const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
-  const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
+  // Add safety check for required props
+  if (!node || !factory || !phase) {
+    console.warn('OrgNode: Missing required props', { node, factory, phase });
+    return null;
+  }
+
+  const roles = useSelector(state => selectRolesByFactory(state, factory)) || [];
+  const personnel = useSelector(state => selectPersonnelByFactory(state, factory)) || [];
+  
+  // Ensure node.roles and node.personnel are arrays
+  const nodeRoles = Array.isArray(node.roles) ? node.roles : [];
+  const nodePersonnel = Array.isArray(node.personnel) ? node.personnel : [];
+  
+  // Find assigned roles and personnel with additional safety checks
+  const assignedRoles = roles.filter(role => role && nodeRoles.includes(role.id)) || [];
+  const assignedPersonnel = personnel.filter(person => person && nodePersonnel.includes(person.id)) || [];
   
   // Use our personnel matching hook
   const {
@@ -51,20 +62,15 @@ const OrgNode = ({
   } = usePersonnelMatching(node, factory, phase);
   
   // Get the department of the node from the first assigned role (if any)
-  const department = assignedRoles.length > 0 ? assignedRoles[0].department : '';
+  const department = assignedRoles.length > 0 && assignedRoles[0]?.department || '';
   
-  // Determine if this node has a vacancy (roles assigned but no personnel)
-  const hasVacancy = assignedRoles.length > 0 && assignedPersonnel.length === 0;
+  // First determine if this node has a vacancy (roles assigned but no personnel)
+  const hasRoles = assignedRoles.length > 0;
+  const hasPersonnel = assignedPersonnel.length > 0;
+  const hasVacancy = hasRoles && !hasPersonnel;
   
-  // Calculate potential matches if there's a vacancy
+  // Then calculate potential matches if there's a vacancy
   const potentialMatches = hasVacancy ? getPotentialMatchCount(assignedRoles) : 0;
-  
-  // Calculate vacancy details
-  const vacancyDetails = {
-    hasVacancy,
-    roleCount: assignedRoles.length,
-    potentialMatches
-  };
   
   const handleDelete = () => {
     dispatch(deleteNode({
@@ -127,25 +133,188 @@ const OrgNode = ({
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            className={`org-node ${factory}`}
-            elevation={snapshot.isDragging ? 8 : isHighlighted ? 6 : 2}
+            elevation={snapshot.isDragging ? 8 : 1}
             sx={{
-              position: 'absolute',
-              top: node.y,
-              left: node.x,
               width: nodeWidth,
-              height: nodeHeight,
-              transition: snapshot.isDragging ? 'none' : 'all 0.2s',
-              overflow: 'hidden',
+              minHeight: nodeHeight,
+              position: 'absolute',
+              left: node.x,
+              top: node.y,
+              backgroundColor: getBackgroundColor(),
+              border: `${nodeBorderWidth}px solid ${getNodeBorderColor()}`,
+              borderRadius: 2,
               display: 'flex',
               flexDirection: 'column',
-              backgroundColor: getBackgroundColor(),
               color: getTextColor(),
-              border: `${nodeBorderWidth}px solid ${getNodeBorderColor()}`,
-              boxShadow: isHighlighted ? '0 0 0 2px #ff9800, 0 4px 8px rgba(0,0,0,0.2)' : undefined,
+              transition: 'box-shadow 0.2s ease',
+              cursor: 'grab',
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+                '& .node-actions': {
+                  opacity: 1
+                }
+              },
+              ...(isHighlighted && {
+                boxShadow: '0 0 0 2px #1976d2',
+              })
             }}
           >
-            {/* ... rest of the component remains the same ... */}
+            {/* Node Header */}
+            <Box sx={{ p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', flex: 1 }}>
+                {node.title}
+              </Typography>
+              
+              <Box className="node-actions" sx={{ opacity: 0, transition: 'opacity 0.2s ease' }}>
+                <IconButton size="small" onClick={handleDelete} sx={{ p: 0.5 }}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+            
+            <Divider />
+            
+            {/* Node Content */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 1 }}>
+              {/* Roles Section */}
+              {visualSettings.showRoles && (
+                <Box sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                    <WorkOutlineIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6 }} />
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                      Roles
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {assignedRoles.map(role => (
+                      <Chip 
+                        key={role.id}
+                        label={role.title}
+                        size="small"
+                        sx={{ 
+                          height: 20, 
+                          fontSize: '0.675rem',
+                          '& .MuiChip-label': { p: '0 6px' }
+                        }}
+                      />
+                    ))}
+                    {!hasRoles && (
+                      <Typography variant="caption" color="text.secondary">
+                        No roles assigned
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              )}
+              
+              {/* Department Section */}
+              {visualSettings.showDepartments && department && (
+                <Box sx={{ px: 1, display: 'flex', alignItems: 'center' }}>
+                  <BusinessIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.875rem' }} />
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {department}
+                  </Typography>
+                </Box>
+              )}
+              
+              <Divider sx={{ my: 0.5 }} />
+              
+              {/* Personnel Section */}
+              {visualSettings.showPersonnel && (
+                <Box sx={{ mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PersonOutlineIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6 }} />
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                        Personnel
+                      </Typography>
+                    </Box>
+                    
+                    {/* Add the matching button if there are vacancies and potential matches */}
+                    {hasVacancy && potentialMatches > 0 && (
+                      <Tooltip title="Find matching personnel">
+                        <IconButton 
+                          size="small" 
+                          onClick={openMatchingSuggestions}
+                          sx={{ p: 0.5 }}
+                        >
+                          <Badge 
+                            badgeContent={potentialMatches} 
+                            color="primary"
+                            overlap="circular"
+                            sx={{ '& .MuiBadge-badge': { fontSize: '9px', height: '16px', minWidth: '16px' } }}
+                          >
+                            <PersonSearchIcon fontSize="small" />
+                          </Badge>
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                  
+                  {/* Display assigned personnel or vacancy message */}
+                  {hasPersonnel ? (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {assignedPersonnel.map(person => (
+                        <Chip 
+                          key={person.id}
+                          label={person.name}
+                          size="small"
+                          sx={{ 
+                            height: 20, 
+                            fontSize: '0.675rem',
+                            '& .MuiChip-label': { p: '0 6px' }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {hasVacancy ? (
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center',
+                            width: '100%' 
+                          }}
+                        >
+                          <Typography 
+                            variant="caption" 
+                            color="error" 
+                            sx={{ display: 'block', fontWeight: 'bold' }}
+                          >
+                            Vacancy
+                          </Typography>
+                          
+                          {potentialMatches > 0 && (
+                            <Button
+                              size="small"
+                              variant="text"
+                              startIcon={<PersonAddIcon fontSize="small" />}
+                              onClick={openMatchingSuggestions}
+                              sx={{ 
+                                fontSize: '0.7rem', 
+                                p: 0, 
+                                minWidth: 0, 
+                                textTransform: 'none',
+                                mt: 0.5
+                              }}
+                            >
+                              Find matches
+                            </Button>
+                          )}
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          No personnel assigned
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </Box>
           </Paper>
         )}
       </Draggable>
