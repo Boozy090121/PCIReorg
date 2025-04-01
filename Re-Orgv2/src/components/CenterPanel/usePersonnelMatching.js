@@ -4,7 +4,7 @@ import { updateNode } from '../../features/orgChartSlice';
 import { selectPersonnelByFactory } from '../../features/personnelSlice';
 import { selectRolesByFactory } from '../../features/roleSlice';
 
-export const usePersonnelMatching = (node, factory, phase, hasVacancy) => {
+export const usePersonnelMatching = (node, factory, phase) => {
   const dispatch = useDispatch();
   
   // Add safety check for required props
@@ -25,11 +25,6 @@ export const usePersonnelMatching = (node, factory, phase, hasVacancy) => {
   
   const getPotentialMatchCount = (assignedRoles = []) => {
     try {
-      // Return early if there's no vacancy
-      if (!hasVacancy) {
-        return 0;
-      }
-      
       // Extract all required skills from assigned roles with additional safety checks
       const requiredSkills = new Set();
       if (Array.isArray(assignedRoles)) {
