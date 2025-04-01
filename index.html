@@ -18,7 +18,6 @@
         .app-container {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
             height: 100vh;
             overflow: hidden;
         }
@@ -88,32 +87,53 @@
             padding: 16px;
             overflow: hidden;
             min-width: 0;
+            height: 100%;
         }
         .org-chart-container {
             flex: 1;
             position: relative;
-            min-width: 2000px;
-            min-height: 1200px;
-            overflow: auto;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             background-color: white;
             border-radius: 4px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+        .org-chart-canvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #fff;
+            background-image: linear-gradient(#f1f1f1 1px, transparent 1px), linear-gradient(90deg, #f1f1f1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .org-chart-canvas.dragging {
+            cursor: grabbing;
+        }
         .org-node {
             border: 2px solid #ccc;
             border-radius: 8px;
-            padding: 16px;
+            padding: 12px;
             background-color: white;
-            width: 320px;
-            min-height: 180px;
+            width: 240px;
+            min-height: 120px;
             position: absolute;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
             z-index: 1;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
         }
         .org-node:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             z-index: 2;
+        }
+        .org-node.dragging {
+            opacity: 0.8;
+            transform: scale(1.02);
+            z-index: 3;
         }
         .org-node.ADD {
             border-color: #CC2030;
@@ -200,6 +220,16 @@
             width: 24px;
             height: 24px;
             margin-right: 8px;
+        }
+        @media (max-width: 1024px) {
+            .panel-container {
+                flex-direction: column;
+                height: auto;
+            }
+            .left-panel, .center-panel, .right-panel {
+                width: 100%;
+                max-height: 40vh;
+            }
         }
     </style>
 
@@ -403,7 +433,7 @@
             Button, AppBar, Toolbar, Typography, IconButton, Box, Tabs, Tab, 
             Paper, Select, MenuItem, FormControl, InputLabel, 
             Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-            Menu, Divider, CircularProgress, Snackbar, Alert
+            Menu, Divider, CircularProgress, Snackbar, Alert, Badge, Chip, Tooltip
         } = MaterialUI;
         
         // Redux Store Setup
@@ -1703,34 +1733,269 @@
                         
                         {/* Draw all nodes */}
                         {orgChart.nodes.map(node => (
-                            <div 
+                            <OrgNode 
                                 key={node.id}
-                                className="org-node"
-                                style={{ 
-                                    left: `${node.x}px`, 
-                                    top: `${node.y}px`,
-                                    cursor: draggingNodeId === node.id ? 'grabbing' : 'grab'
-                                }}
-                                onMouseDown={(e) => startDrag(node.id, e)}
-                            >
-                                <Typography variant="subtitle1">{node.title}</Typography>
-                                <Typography variant="body2">{getRoleTitleById(node.roleId)}</Typography>
-                                <Box mt={1} display="flex" justifyContent="flex-end">
-                                    <IconButton 
-                                        size="small"
-                                        onClick={() => dispatch(deleteNode({
-                                            phase: currentPhase,
-                                            factory: currentFactory,
-                                            nodeId: node.id
-                                        }))}
-                                    >
-                                        <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
-                                    </IconButton>
-                                </Box>
-                            </div>
+                                node={node}
+                                index={node.id}
+                                factory={currentFactory}
+                                phase={currentPhase}
+                            />
                         ))}
                     </div>
                 </div>
+            );
+        };
+
+        const OrgNode = ({ node, index, factory, phase, visualSettings = {}, isHighlighted = false }) => {
+            const dispatch = useDispatch();
+            const roles = useSelector(state => state.roles.roles[factory]);
+            const personnel = useSelector(state => state.personnel.personnel[factory]);
+            
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
+            
+            const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
+            const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
+            const department = assignedRoles.length > 0 ? assignedRoles[0].department : '';
+            const hasVacancy = assignedPersonnel.length === 0 && visualSettings.highlightVacancies;
+            
+            const handleDelete = (e) => {
+                e.stopPropagation();
+                dispatch(deleteNode({ phase, factory, nodeId: node.id }));
+            };
+            
+            const handleMouseDown = (e) => {
+                if (e.target.closest('button')) return;
+                setIsDragging(true);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setDragOffset({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                });
+            };
+            
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                const container = document.getElementById('org-chart-container');
+                if (!container) return;
+                
+                const containerRect = container.getBoundingClientRect();
+                let newX = e.clientX - containerRect.left - dragOffset.x;
+                let newY = e.clientY - containerRect.top - dragOffset.y;
+                
+                dispatch(updateNode({
+                    phase,
+                    factory,
+                    node: { ...node, x: newX, y: newY }
+                }));
+            };
+            
+            const handleMouseUp = () => {
+                setIsDragging(false);
+            };
+            
+            // Personnel matching functionality
+            const vacancyDetails = {
+                hasVacancy: assignedRoles.length > 0 && assignedPersonnel.length === 0,
+                roleCount: assignedRoles.length,
+                potentialMatches: getPotentialMatchCount()
+            };
+            
+            function getPotentialMatchCount() {
+                if (!vacancyDetails.hasVacancy) return 0;
+                
+                const requiredSkills = new Set();
+                assignedRoles.forEach(role => {
+                    if (role.skills) {
+                        role.skills.forEach(skill => requiredSkills.add(skill));
+                    }
+                });
+                
+                if (requiredSkills.size === 0) return personnel.length;
+                
+                return personnel.filter(person => {
+                    if (node.personnel?.includes(person.id)) return false;
+                    if (!person.skills || person.skills.length === 0) return false;
+                    return person.skills.some(skill => requiredSkills.has(skill));
+                }).length;
+            }
+            
+            const handleAssignPersonnel = (personId) => {
+                dispatch(updateNode({
+                    phase,
+                    factory,
+                    node: {
+                        ...node,
+                        personnel: [...(node.personnel || []), personId]
+                    }
+                }));
+                setMatchingSuggestionsOpen(false);
+            };
+            
+            return (
+                <>
+                    <Paper
+                        className={`org-node ${factory}`}
+                        elevation={isDragging ? 8 : isHighlighted ? 6 : 2}
+                        sx={{
+                            position: 'absolute',
+                            top: node.y,
+                            left: node.x,
+                            width: visualSettings.nodeWidth || 240,
+                            height: visualSettings.nodeHeight || 120,
+                            transition: isDragging ? 'none' : 'all 0.2s',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            backgroundColor: hasVacancy ? '#fff8e1' : '#ffffff',
+                            border: `${visualSettings.nodeBorderWidth || 2}px solid ${factory === 'ADD' ? '#CC2030' : factory === 'BBV' ? '#00518A' : '#232323'}`,
+                            boxShadow: isHighlighted ? '0 0 0 2px #ff9800' : undefined,
+                            cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                    >
+                        <Box sx={{ p: 1 }}>
+                            <Typography variant="h6">{node.title}</Typography>
+                            <Typography variant="body2">{department}</Typography>
+                            
+                            {visualSettings.showRoles && (
+                                <Box sx={{ mt: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>work_outline</span>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                                            Roles
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {assignedRoles.map(role => (
+                                            <Chip 
+                                                key={role.id} 
+                                                label={role.title} 
+                                                size="small" 
+                                                sx={{ height: 20, fontSize: '0.675rem' }} 
+                                            />
+                                        ))}
+                                    </Box>
+                                </Box>
+                            )}
+                            
+                            {visualSettings.showPersonnel && (
+                                <Box sx={{ mt: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>person_outline</span>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                                                Personnel
+                                            </Typography>
+                                        </Box>
+                                        
+                                        {vacancyDetails.hasVacancy && vacancyDetails.potentialMatches > 0 && (
+                                            <Tooltip title="Find matching personnel">
+                                                <IconButton 
+                                                    size="small" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setMatchingSuggestionsOpen(true);
+                                                    }}
+                                                    sx={{ p: 0.5 }}
+                                                >
+                                                    <Badge 
+                                                        badgeContent={vacancyDetails.potentialMatches} 
+                                                        color="primary"
+                                                        overlap="circular"
+                                                        sx={{ '& .MuiBadge-badge': { fontSize: '9px', height: '16px', minWidth: '16px' } }}
+                                                    >
+                                                        <span className="material-icons" style={{fontSize: '16px'}}>person_search</span>
+                                                    </Badge>
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                    </Box>
+                                    
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {assignedPersonnel.map(person => (
+                                            <Chip 
+                                                key={person.id} 
+                                                label={person.name} 
+                                                size="small" 
+                                                sx={{ height: 20, fontSize: '0.675rem' }} 
+                                            />
+                                        ))}
+                                        {assignedPersonnel.length === 0 && (
+                                            <Typography variant="caption" color="text.secondary">
+                                                {vacancyDetails.hasVacancy ? 'Vacancy' : 'No personnel assigned'}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
+                            
+                            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                                <IconButton size="small" onClick={handleDelete}>
+                                    <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                </IconButton>
+                            </Box>
+                        </Box>
+                    </Paper>
+                    
+                    <Dialog
+                        open={matchingSuggestionsOpen}
+                        onClose={() => setMatchingSuggestionsOpen(false)}
+                        maxWidth="sm"
+                        fullWidth
+                    >
+                        <DialogTitle>
+                            Personnel Matching Suggestions
+                        </DialogTitle>
+                        <DialogContent>
+                            <Typography variant="body2" paragraph>
+                                The following personnel match the required skills for this position:
+                            </Typography>
+                            <Box sx={{ mt: 2 }}>
+                                {personnel
+                                    .filter(person => !node.personnel?.includes(person.id))
+                                    .map(person => (
+                                        <Box
+                                            key={person.id}
+                                            sx={{
+                                                p: 1,
+                                                mb: 1,
+                                                border: '1px solid #e0e0e0',
+                                                borderRadius: 1,
+                                                '&:hover': {
+                                                    backgroundColor: '#f5f5f5'
+                                                }
+                                            }}
+                                        >
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <Typography variant="subtitle1">{person.name}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {person.skills?.join(', ')}
+                                                    </Typography>
+                                                </div>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => handleAssignPersonnel(person.id)}
+                                                >
+                                                    Assign
+                                                </Button>
+                                            </Box>
+                                        </Box>
+                                    ))}
+                            </Box>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setMatchingSuggestionsOpen(false)}>
+                                Close
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </>
             );
         };
 
@@ -1802,38 +2067,109 @@
             };
             
             return (
-                <div className="app-container">
+                <Box className="app-container">
                     <AppHeader />
                     
-                    <div className="main-content">
-                        <div className="control-bar">
-                            <FactorySelector />
-                            <PhaseSelector />
-                        </div>
-                        
-                        <div className="tab-panel">
-                            <Tabs value={currentTab} onChange={handleTabChange}>
-                                <Tab label="Organization Chart" />
-                                <Tab label="Roles & Personnel" />
-                            </Tabs>
-                        </div>
-                        
-                        {currentTab === 0 && (
-                            <OrgChart />
-                        )}
-                        
-                        {currentTab === 1 && (
-                            <div className="panel-container">
-                                <div className="left-panel">
-                                    <RoleList />
-                                </div>
-                                <div className="right-panel">
-                                    <PersonnelList />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                    <Box sx={{ display: 'flex', padding: 2, gap: 2 }}>
+                        <FactorySelector />
+                        <PhaseSelector />
+                        <Box sx={{ ml: 'auto' }}>
+                            <UserMenu />
+                        </Box>
+                    </Box>
+                    
+                    <Paper sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                        <Tabs value={currentTab} onChange={handleTabChange} centered>
+                            <Tab label="Organization Chart" />
+                            <Tab label="Phase Comparison" />
+                            <Tab label="Reports & Analytics" />
+                            <Tab label="Dashboard" />
+                        </Tabs>
+                    </Paper>
+
+                    {currentTab === 0 && (
+                        <FlexibleLayout
+                            leftPanel={<RoleList />}
+                            centerPanel={<OrgChart />}
+                            rightPanel={<PersonnelList />}
+                        />
+                    )}
+                    
+                    {currentTab === 1 && (
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6">Phase Comparison Tool</Typography>
+                            <Typography>Coming soon: Compare organization states between phases</Typography>
+                        </Box>
+                    )}
+                    
+                    {currentTab === 2 && (
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6">Reports & Analytics</Typography>
+                            <Typography>Coming soon: Detailed reports and analytics</Typography>
+                        </Box>
+                    )}
+                    
+                    {currentTab === 3 && (
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6">Dashboard</Typography>
+                            <Typography>Coming soon: Organization overview dashboard</Typography>
+                        </Box>
+                    )}
+                </Box>
+            );
+        };
+
+        // FlexibleLayout component
+        const FlexibleLayout = ({ leftPanel, centerPanel, rightPanel }) => {
+            return (
+                <Box 
+                    sx={{ 
+                        display: 'flex', 
+                        height: 'calc(100vh - 200px)',
+                        width: '100%',
+                        gap: 2,
+                        overflow: 'hidden',
+                        px: 2
+                    }}
+                >
+                    <Paper 
+                        sx={{ 
+                            width: '20%', 
+                            overflow: 'auto',
+                            padding: 2,
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }} 
+                        elevation={1}
+                    >
+                        {leftPanel}
+                    </Paper>
+                    
+                    <Paper 
+                        sx={{ 
+                            flex: 1, 
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }} 
+                        elevation={1}
+                    >
+                        {centerPanel}
+                    </Paper>
+                    
+                    <Paper 
+                        sx={{ 
+                            width: '20%', 
+                            overflow: 'auto',
+                            padding: 2,
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }} 
+                        elevation={1}
+                    >
+                        {rightPanel}
+                    </Paper>
+                </Box>
             );
         };
 

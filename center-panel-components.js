@@ -35,6 +35,9 @@ const CenterPanel = () => {
   const [searchFilterOpen, setSearchFilterOpen] = useState(false);
   const [activeFilters, setActiveFilters] = useState(0);
   const [activeSearch, setActiveSearch] = useState('');
+  const [chartPosition, setChartPosition] = useState({ x: 0, y: 0 });
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
   // Visualization settings state
   const [visualSettings, setVisualSettings] = useState({
@@ -66,6 +69,7 @@ const CenterPanel = () => {
 
   const handleFitScreen = () => {
     setZoom(1);
+    setChartPosition({ x: 0, y: 0 });
   };
 
   const handleToggleFullscreen = () => {
@@ -116,49 +120,33 @@ const CenterPanel = () => {
     setActiveFilters(0);
   };
 
-  const handleDragEnd = (result) => {
-    const { destination, source, draggableId, type } = result;
-
-    // If dropped outside of a droppable area or in the same position
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
-      return;
+  // Canvas panning functionality
+  const handleCanvasMouseDown = (e) => {
+    // Only start panning if not clicking on a node
+    if (e.target.classList.contains('org-chart-canvas')) {
+      setIsDraggingCanvas(true);
+      setDragStart({
+        x: e.clientX - chartPosition.x,
+        y: e.clientY - chartPosition.y
+      });
     }
+  };
 
-    // Handle node repositioning
-    if (type === 'NODE') {
-      // Find the node
-      const nodeIndex = orgChart.nodes.findIndex(node => node.id === draggableId);
-      if (nodeIndex === -1) return;
-      
-      const node = orgChart.nodes[nodeIndex];
-      
-      // Update position based on the visualSettings layout
-      let updatedNode;
-      
-      if (visualSettings.layout === 'hierarchical') {
-        // For hierarchical layout, position is more structured
-        updatedNode = {
-          ...node,
-          x: destination.index * visualSettings.nodeSpacing + 100,
-          y: parseInt(destination.droppableId) * visualSettings.levelSpacing + 100
-        };
-      } else {
-        // For other layouts, allow more freedom in positioning
-        updatedNode = {
-          ...node,
-          x: destination.index * 150 + 100,
-          y: parseInt(destination.droppableId) * 100 + 100
-        };
-      }
-      
-      dispatch(updateNode({
-        phase: currentPhase,
-        factory: currentFactory,
-        node: updatedNode
-      }));
+  const handleCanvasMouseMove = (e) => {
+    if (isDraggingCanvas) {
+      setChartPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
     }
+  };
+
+  const handleCanvasMouseUp = () => {
+    setIsDraggingCanvas(false);
+  };
+
+  const handleCanvasMouseLeave = () => {
+    setIsDraggingCanvas(false);
   };
 
   return (
@@ -183,7 +171,9 @@ const CenterPanel = () => {
         display: 'flex', 
         justifyContent: 'space-between', 
         mb: 2,
-        flexShrink: 0 
+        flexShrink: 0,
+        p: 1,
+        borderBottom: '1px solid #e0e0e0'
       }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button 
@@ -191,6 +181,7 @@ const CenterPanel = () => {
             color="primary"
             startIcon={<AddIcon />}
             onClick={handleAddNodeClick}
+            size="small"
           >
             Add Position
           </Button>
@@ -204,6 +195,7 @@ const CenterPanel = () => {
               <SearchIcon />
             }
             onClick={handleSearchFilterOpen}
+            size="small"
           >
             Search
           </Button>
@@ -217,6 +209,7 @@ const CenterPanel = () => {
               <FilterListIcon />
             }
             onClick={handleSearchFilterOpen}
+            size="small"
           >
             Filter
           </Button>
@@ -224,27 +217,27 @@ const CenterPanel = () => {
         
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Tooltip title="Visualization Options">
-            <IconButton onClick={handleVisualizationOptionsOpen}>
+            <IconButton onClick={handleVisualizationOptionsOpen} size="small">
               <TuneIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Zoom In">
-            <IconButton onClick={handleZoomIn}>
+            <IconButton onClick={handleZoomIn} size="small">
               <ZoomInIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Zoom Out">
-            <IconButton onClick={handleZoomOut}>
+            <IconButton onClick={handleZoomOut} size="small">
               <ZoomOutIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Fit to Screen">
-            <IconButton onClick={handleFitScreen}>
+            <IconButton onClick={handleFitScreen} size="small">
               <FitScreenIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-            <IconButton onClick={handleToggleFullscreen}>
+            <IconButton onClick={handleToggleFullscreen} size="small">
               <FullscreenIcon />
             </IconButton>
           </Tooltip>
@@ -256,21 +249,30 @@ const CenterPanel = () => {
         sx={{ 
           flex: 1,
           minHeight: 0,
-          overflow: 'auto',
+          overflow: 'hidden',
           position: 'relative',
           border: '1px solid #e0e0e0',
           borderRadius: 1,
           backgroundColor: '#f9f9f9'
         }}
+        onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
+        onMouseLeave={handleCanvasMouseLeave}
+        className="org-chart-canvas"
       >
         <Box
           sx={{ 
-            position: 'relative',
+            position: 'absolute',
+            top: 0,
+            left: 0,
             width: '100%',
             height: '100%',
-            minWidth: '2000px',
-            minHeight: '1200px'
+            transform: `scale(${zoom}) translate(${chartPosition.x}px, ${chartPosition.y}px)`,
+            transformOrigin: '0 0',
+            transition: isDraggingCanvas ? 'none' : 'transform 0.1s ease'
           }}
+          className="org-chart-canvas"
         >
           <OrgChartContent 
             nodes={orgChart.nodes} 
@@ -333,19 +335,6 @@ const OrgChartContent = ({
   const roles = useSelector(state => selectRolesByFactory(state, currentFactory));
   const personnel = useSelector(state => selectPersonnelByFactory(state, currentFactory));
   
-  // Apply layout based on visualSettings
-  useEffect(() => {
-    if (!visualSettings.layout || nodes.length === 0) return;
-    
-    // This would be where you implement different layout algorithms
-    // In a real application, you'd use a proper graph layout library
-    // like dagre, elkjs, or a custom implementation
-    
-    // For this example, we'll just simulate the layout change
-    console.log(`Layout changed to: ${visualSettings.layout}, direction: ${visualSettings.direction}`);
-    
-  }, [visualSettings.layout, visualSettings.direction, nodes]);
-  
   // Filter nodes based on search term
   const filteredNodes = nodes.filter(node => {
     if (!searchTerm) return true;
@@ -380,90 +369,16 @@ const OrgChartContent = ({
     return false;
   });
   
-  // Calculate connections as SVG paths
-  const renderConnections = () => {
-    return connections.map(connection => {
-      const sourceNode = nodes.find(node => node.id === connection.sourceId);
-      const targetNode = nodes.find(node => node.id === connection.targetId);
-      
-      if (!sourceNode || !targetNode) return null;
-      
-      // Skip connections for filtered out nodes
-      if (searchTerm && 
-          !filteredNodes.some(n => n.id === sourceNode.id) && 
-          !filteredNodes.some(n => n.id === targetNode.id)) {
-        return null;
-      }
-      
-      // Calculate node dimensions from settings
-      const nodeWidth = visualSettings.nodeWidth || 200;
-      const nodeHeight = visualSettings.nodeHeight || 120;
-      
-      // Calculate source and target positions
-      const sourceX = sourceNode.x + nodeWidth / 2;
-      const sourceY = sourceNode.y + nodeHeight;
-      const targetX = targetNode.x + nodeWidth / 2;
-      const targetY = targetNode.y;
-      
-      // Create path based on connection style
-      let path;
-      
-      switch (visualSettings.connectionStyle) {
-        case 'straight':
-          path = `M${sourceX},${sourceY} L${targetX},${targetY}`;
-          break;
-        case 'orthogonal':
-          const midY = (sourceY + targetY) / 2;
-          path = `M${sourceX},${sourceY} L${sourceX},${midY} L${targetX},${midY} L${targetX},${targetY}`;
-          break;
-        case 'curved':
-        default:
-          path = `M${sourceX},${sourceY} C${sourceX},${(sourceY + targetY) / 2} ${targetX},${(sourceY + targetY) / 2} ${targetX},${targetY}`;
-      }
-      
-      // Highlight the connection if it's connected to a search result
-      const isHighlighted = searchTerm && (
-        filteredNodes.some(n => n.id === sourceNode.id) || 
-        filteredNodes.some(n => n.id === targetNode.id)
-      );
-      
-      return (
-        <path
-          key={connection.id}
-          d={path}
-          className="connection-line"
-          markerEnd="url(#arrowhead)"
-          style={{
-            stroke: isHighlighted ? '#ff9800' : '#666',
-            strokeWidth: isHighlighted ? 3 : 2,
-            strokeDasharray: isHighlighted ? '5,5' : 'none',
-          }}
-        />
-      );
-    });
-  };
-  
-  // Calculate layout dimensions
-  const chartWidth = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal' 
-    ? '12000px' : '8000px';
-  const chartHeight = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal'
-    ? '6000px' : '8000px';
-  
   return (
     <Box
       sx={{
-        transform: `scale(${zoom})`,
-        transformOrigin: '0 0',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: chartWidth,
-        height: chartHeight,
-        backgroundColor: '#ffffff',
+        position: 'relative',
+        width: '2000px',
+        height: '1500px',
         padding: '60px',
-        boxSizing: 'border-box',
-        transition: 'transform 0.2s ease'
+        boxSizing: 'border-box'
       }}
+      className="org-chart-canvas"
     >
       {/* SVG for connections */}
       <svg
