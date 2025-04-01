@@ -1,7 +1,8 @@
 # Netlify configuration file
 
 [build]
-  # No build command needed since we're using CDN links
+  # Explicitly set an empty build command
+  command = ""  # No build command needed since we're using CDN links
   publish = "."  # Publish the root directory
 
 [[redirects]]

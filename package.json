@@ -2,10 +2,9 @@
   "name": "re-org-application",
   "version": "1.0.0",
   "description": "Quality Re-organization Tool",
-  "main": "app-layout.js",
+  "main": "index.html",
   "scripts": {
-    "start": "webpack serve --mode development --open",
-    "build": "webpack --mode production",
+    "start": "echo 'No build process required - open index.html directly'",
     "test": "jest"
   },
   "dependencies": {

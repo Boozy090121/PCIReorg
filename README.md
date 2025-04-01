@@ -12,9 +12,14 @@ This is a simple deployment-ready version of the Quality Re-organization Tool th
 3. Click "New site from Git"
 4. Select your repository
 5. In the build settings:
-   - Build command: Leave empty (no build required)
+   - Build command: **Leave empty** (critical - do not set a build command)
    - Publish directory: `.` (root directory)
 6. Click "Deploy site"
+
+### Important Notes for Netlify
+- The `netlify.toml` file has been configured with `command = ""` to explicitly tell Netlify not to run any build command
+- If you encounter build errors, go to Site settings > Build & deploy > Continuous Deployment > Build settings and ensure that the "Build command" field is empty
+- You can also set environment variable `NETLIFY_SKIP_BUILD=true` in your site settings to prevent Netlify from running a build
 
 ### Files
 - `index.html`: Main entry point with all CDN references
