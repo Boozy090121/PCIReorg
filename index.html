@@ -668,38 +668,85 @@
             };
             
             const handleLogin = async () => {
+                if (!credentials.email || !credentials.password) {
+                    dispatch(loginFailure('Please enter both email and password'));
+                    return;
+                }
+
                 dispatch(loginStart());
                 
-                const result = await window.FirebaseService.login(credentials.email, credentials.password);
-                
-                if (result.success) {
-                    dispatch(loginSuccess(result.user));
+                try {
+                    const result = await window.FirebaseService.login(credentials.email, credentials.password);
                     
-                    // Load user data
-                    loadUserAppState();
-                } else {
-                    dispatch(loginFailure(result.message || 'Login failed'));
+                    if (result.success) {
+                        dispatch(loginSuccess(result.user));
+                        // Load user data
+                        loadUserAppState();
+                    } else {
+                        let errorMessage = result.message || 'Login failed';
+                        // Make error messages more user-friendly
+                        if (errorMessage.includes('CONFIGURATION_NOT_FOUND')) {
+                            errorMessage = 'Authentication service is not properly configured. Please contact support.';
+                        } else if (errorMessage.includes('auth/user-not-found')) {
+                            errorMessage = 'No account found with this email address';
+                        } else if (errorMessage.includes('auth/wrong-password')) {
+                            errorMessage = 'Incorrect password';
+                        } else if (errorMessage.includes('auth/invalid-email')) {
+                            errorMessage = 'Invalid email address format';
+                        }
+                        dispatch(loginFailure(errorMessage));
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    dispatch(loginFailure('An unexpected error occurred. Please try again.'));
                 }
             };
             
             const handleRegister = async () => {
+                // Validate inputs
+                if (!registerData.email || !registerData.password || !registerData.name) {
+                    dispatch(loginFailure('Please fill in all fields'));
+                    return;
+                }
+
                 // Validate password match
                 if (registerData.password !== registerData.confirmPassword) {
                     dispatch(loginFailure('Passwords do not match'));
                     return;
                 }
+
+                // Validate password strength
+                if (registerData.password.length < 6) {
+                    dispatch(loginFailure('Password must be at least 6 characters long'));
+                    return;
+                }
                 
                 dispatch(loginStart());
                 
-                const result = await window.FirebaseService.register(registerData);
-                
-                if (result.success) {
-                    dispatch(loginSuccess(result.user));
+                try {
+                    const result = await window.FirebaseService.register(registerData);
                     
-                    // Initialize empty app state for new user
-                    saveUserAppState();
-                } else {
-                    dispatch(loginFailure(result.message || 'Registration failed'));
+                    if (result.success) {
+                        dispatch(loginSuccess(result.user));
+                        // Initialize empty app state for new user
+                        saveUserAppState();
+                    } else {
+                        let errorMessage = result.message || 'Registration failed';
+                        // Make error messages more user-friendly
+                        if (errorMessage.includes('CONFIGURATION_NOT_FOUND')) {
+                            errorMessage = 'Authentication service is not properly configured. Please contact support.';
+                        } else if (errorMessage.includes('auth/email-already-in-use')) {
+                            errorMessage = 'An account already exists with this email address';
+                        } else if (errorMessage.includes('auth/invalid-email')) {
+                            errorMessage = 'Invalid email address format';
+                        } else if (errorMessage.includes('auth/weak-password')) {
+                            errorMessage = 'Password is too weak. Please use a stronger password';
+                        }
+                        dispatch(loginFailure(errorMessage));
+                    }
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    dispatch(loginFailure('An unexpected error occurred. Please try again.'));
                 }
             };
             
