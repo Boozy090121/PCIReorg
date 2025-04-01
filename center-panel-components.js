@@ -164,8 +164,10 @@ const CenterPanel = () => {
   return (
     <Box 
       sx={{ 
-        height: '100%', 
-        position: 'relative',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
         ...(isFullscreen && {
           position: 'fixed',
           top: 0,
@@ -177,119 +179,108 @@ const CenterPanel = () => {
         })
       }}
     >
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          height: '100%', 
-          display: 'flex', 
-          flexDirection: 'column',
-          p: 2
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
-              variant="contained" 
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={handleAddNodeClick}
-            >
-              Add Position
-            </Button>
-            
-            <Button
-              variant="outlined"
-              startIcon={activeSearch ? 
-                <Badge color="primary" variant="dot">
-                  <SearchIcon />
-                </Badge> : 
-                <SearchIcon />
-              }
-              onClick={handleSearchFilterOpen}
-            >
-              Search
-            </Button>
-            
-            <Button
-              variant="outlined"
-              startIcon={activeFilters > 0 ? 
-                <Badge badgeContent={activeFilters} color="primary">
-                  <FilterListIcon />
-                </Badge> : 
-                <FilterListIcon />
-              }
-              onClick={handleSearchFilterOpen}
-            >
-              Filter
-            </Button>
-          </Box>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        mb: 2,
+        flexShrink: 0 
+      }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button 
+            variant="contained" 
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleAddNodeClick}
+          >
+            Add Position
+          </Button>
           
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="Visualization Options">
-              <IconButton onClick={handleVisualizationOptionsOpen}>
-                <TuneIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Zoom In">
-              <IconButton onClick={handleZoomIn}>
-                <ZoomInIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Zoom Out">
-              <IconButton onClick={handleZoomOut}>
-                <ZoomOutIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Fit to Screen">
-              <IconButton onClick={handleFitScreen}>
-                <FitScreenIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-              <IconButton onClick={handleToggleFullscreen}>
-                <FullscreenIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
+          <Button
+            variant="outlined"
+            startIcon={activeSearch ? 
+              <Badge color="primary" variant="dot">
+                <SearchIcon />
+              </Badge> : 
+              <SearchIcon />
+            }
+            onClick={handleSearchFilterOpen}
+          >
+            Search
+          </Button>
+          
+          <Button
+            variant="outlined"
+            startIcon={activeFilters > 0 ? 
+              <Badge badgeContent={activeFilters} color="primary">
+                <FilterListIcon />
+              </Badge> : 
+              <FilterListIcon />
+            }
+            onClick={handleSearchFilterOpen}
+          >
+            Filter
+          </Button>
         </Box>
         
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Box 
-            id="org-chart-container"
-            sx={{ 
-              flex: 1, 
-              overflow: 'auto', 
-              position: 'relative',
-              border: '1px solid #e0e0e0',
-              borderRadius: 1,
-              backgroundColor: '#f9f9f9'
-            }}
-          >
-            <Droppable droppableId="org-chart" type="NODE">
-              {(provided) => (
-                <Box
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  sx={{ 
-                    height: '100%',
-                    width: '100%',
-                    position: 'relative'
-                  }}
-                >
-                  <OrgChartContent 
-                    nodes={orgChart.nodes} 
-                    connections={orgChart.connections}
-                    zoom={zoom}
-                    visualSettings={visualSettings}
-                    searchTerm={activeSearch}
-                  />
-                  {provided.placeholder}
-                </Box>
-              )}
-            </Droppable>
-          </Box>
-        </DragDropContext>
-      </Paper>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Visualization Options">
+            <IconButton onClick={handleVisualizationOptionsOpen}>
+              <TuneIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom In">
+            <IconButton onClick={handleZoomIn}>
+              <ZoomInIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom Out">
+            <IconButton onClick={handleZoomOut}>
+              <ZoomOutIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Fit to Screen">
+            <IconButton onClick={handleFitScreen}>
+              <FitScreenIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+            <IconButton onClick={handleToggleFullscreen}>
+              <FullscreenIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+      
+      <Box 
+        id="org-chart-container"
+        sx={{ 
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          position: 'relative',
+          border: '1px solid #e0e0e0',
+          borderRadius: 1,
+          backgroundColor: '#f9f9f9'
+        }}
+      >
+        <Box
+          sx={{ 
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            minWidth: '2000px',
+            minHeight: '1200px'
+          }}
+        >
+          <OrgChartContent 
+            nodes={orgChart.nodes} 
+            connections={orgChart.connections}
+            zoom={zoom}
+            visualSettings={visualSettings}
+            searchTerm={activeSearch}
+          />
+        </Box>
+      </Box>
       
       {isCreatingNode && (
         <OrgNodeCreator 
@@ -463,15 +454,15 @@ const OrgChartContent = ({
       sx={{
         transform: `scale(${zoom})`,
         transformOrigin: '0 0',
-        height: chartHeight,
+        position: 'absolute',
+        top: 0,
+        left: 0,
         width: chartWidth,
-        position: 'relative',
-        minWidth: '2000px',
-        minHeight: '1200px',
-        transition: 'transform 0.2s ease',
+        height: chartHeight,
         backgroundColor: '#ffffff',
         padding: '60px',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        transition: 'transform 0.2s ease'
       }}
     >
       {/* SVG for connections */}
