@@ -63,17 +63,31 @@ function initializeFirebaseService() {
                             role: 'user' // Default role
                         };
                         
-                        // Check if the user has admin role
+                        // Check if the user document exists
                         firestore.collection('users').doc(user.uid).get()
                             .then(doc => {
-                                if (doc.exists && doc.data().role === 'admin') {
-                                    currentUser.role = 'admin';
-                                    console.log('User role updated to admin');
+                                if (!doc.exists) {
+                                    // Create the user document if it doesn't exist
+                                    return firestore.collection('users').doc(user.uid).set({
+                                        name: currentUser.name,
+                                        email: currentUser.email,
+                                        role: currentUser.role,
+                                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                                    });
+                                } else {
+                                    // Update the current user with stored data
+                                    const userData = doc.data();
+                                    currentUser.name = userData.name || currentUser.name;
+                                    currentUser.role = userData.role || currentUser.role;
                                 }
                             })
                             .catch(error => {
-                                console.error("Error checking user role:", error);
-                                // Don't throw here as this is not critical
+                                // Handle permission errors gracefully
+                                if (error.code === 'permission-denied') {
+                                    console.warn('Permission denied accessing user document. Using default user data.');
+                                } else {
+                                    console.error('Error managing user document:', error);
+                                }
                             });
                     } else {
                         currentUser = null;
@@ -96,12 +110,6 @@ function initializeFirebaseService() {
         // Helper function to check initialization
         const checkInitialization = () => {
             if (!isInitialized) {
-                console.error('Firebase services not initialized. Current state:', {
-                    isInitialized,
-                    hasApp: !!app,
-                    hasAuth: !!auth,
-                    hasFirestore: !!firestore
-                });
                 throw new Error('Firebase service not properly initialized');
             }
         };
@@ -123,24 +131,33 @@ function initializeFirebaseService() {
                     role: 'user'
                 };
                 
-                // Get user role from Firestore
-                console.log('Fetching user data from Firestore...');
-                const userDoc = await firestore.collection('users').doc(user.uid).get();
-                if (userDoc.exists) {
-                    const userData = userDoc.data();
-                    currentUser.name = userData.name || currentUser.name;
-                    currentUser.role = userData.role || currentUser.role;
-                    console.log('User data retrieved from Firestore');
-                } else {
-                    console.log('Creating new user document in Firestore...');
-                    // Create user document if it doesn't exist
-                    await firestore.collection('users').doc(user.uid).set({
-                        name: currentUser.name,
-                        email: currentUser.email,
-                        role: currentUser.role,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    console.log('New user document created in Firestore');
+                try {
+                    // Get user role from Firestore
+                    console.log('Fetching user data from Firestore...');
+                    const userDoc = await firestore.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        currentUser.name = userData.name || currentUser.name;
+                        currentUser.role = userData.role || currentUser.role;
+                        console.log('User data retrieved from Firestore');
+                    } else {
+                        console.log('Creating new user document in Firestore...');
+                        // Create user document if it doesn't exist
+                        await firestore.collection('users').doc(user.uid).set({
+                            name: currentUser.name,
+                            email: currentUser.email,
+                            role: currentUser.role,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        console.log('New user document created in Firestore');
+                    }
+                } catch (error) {
+                    // Handle Firestore errors gracefully
+                    if (error.code === 'permission-denied') {
+                        console.warn('Permission denied accessing user document. Using default user data.');
+                    } else {
+                        console.error('Error managing user document:', error);
+                    }
                 }
                 
                 return { success: true, user: currentUser };
@@ -206,13 +223,22 @@ function initializeFirebaseService() {
             if (!currentUser) return { success: false, message: 'Not logged in' };
             
             try {
+                console.log('Saving app state to Firestore...');
                 await firestore.collection('appData').doc(currentUser.id).set({
                     data: state,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
                 
+                console.log('App state saved successfully');
                 return { success: true };
             } catch (error) {
+                console.error('Error saving app state:', error);
+                if (error.code === 'permission-denied') {
+                    return { 
+                        success: false, 
+                        message: 'Permission denied. Please check if you have the necessary permissions.' 
+                    };
+                }
                 return { success: false, message: error.message };
             }
         };
@@ -221,15 +247,21 @@ function initializeFirebaseService() {
             if (!currentUser) return null;
             
             try {
+                console.log('Loading app state from Firestore...');
                 const doc = await firestore.collection('appData').doc(currentUser.id).get();
                 
                 if (doc.exists) {
+                    console.log('App state loaded successfully');
                     return doc.data().data;
                 }
                 
+                console.log('No existing app state found');
                 return null;
             } catch (error) {
-                console.error("Error loading app state:", error);
+                console.error('Error loading app state:', error);
+                if (error.code === 'permission-denied') {
+                    console.warn('Permission denied accessing app data. Using empty state.');
+                }
                 return null;
             }
         };
@@ -239,9 +271,11 @@ function initializeFirebaseService() {
             if (!currentUser) return null;
             
             try {
+                console.log('Exporting user data...');
                 const doc = await firestore.collection('appData').doc(currentUser.id).get();
                 
                 if (doc.exists) {
+                    console.log('User data exported successfully');
                     return {
                         userId: currentUser.id,
                         username: currentUser.email,
@@ -251,9 +285,13 @@ function initializeFirebaseService() {
                     };
                 }
                 
+                console.log('No data to export');
                 return null;
             } catch (error) {
-                console.error("Error exporting user data:", error);
+                console.error('Error exporting user data:', error);
+                if (error.code === 'permission-denied') {
+                    console.warn('Permission denied accessing app data for export.');
+                }
                 return null;
             }
         };
@@ -263,6 +301,7 @@ function initializeFirebaseService() {
             if (!currentUser) return { success: false, message: 'Not logged in' };
             
             try {
+                console.log('Importing user data...');
                 const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
                 
                 await firestore.collection('appData').doc(currentUser.id).set({
@@ -272,8 +311,16 @@ function initializeFirebaseService() {
                     originalTimestamp: data.timestamp
                 }, { merge: true });
                 
+                console.log('User data imported successfully');
                 return { success: true };
             } catch (error) {
+                console.error('Error importing user data:', error);
+                if (error.code === 'permission-denied') {
+                    return { 
+                        success: false, 
+                        message: 'Permission denied. Please check if you have the necessary permissions.' 
+                    };
+                }
                 return { success: false, message: error.message || 'Invalid data format' };
             }
         };
