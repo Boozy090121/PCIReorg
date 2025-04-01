@@ -20,48 +20,866 @@
             flex-direction: column;
             min-height: 100vh;
         }
-        #root {
-            flex: 1;
+        .header {
+            background-color: #1976d2;
+            color: white;
+            padding: 12px 24px;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        .version-badge {
+            background-color: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .main-content {
+            padding: 24px;
+            flex: 1;
+        }
+        .control-bar {
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .panel-container {
+            display: flex;
+            gap: 16px;
+            height: calc(100vh - 200px);
+        }
+        .left-panel, .right-panel {
+            width: 250px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .center-panel {
+            flex: 1;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 16px;
+            overflow: auto;
+            position: relative;
+        }
+        .org-node {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 12px;
+            background-color: white;
+            width: 200px;
+            position: absolute;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tab-panel {
+            margin-bottom: 16px;
+        }
+        .role-item, .personnel-item {
+            padding: 8px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            background-color: white;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .role-item:hover, .personnel-item:hover {
+            background-color: #f0f7ff;
         }
     </style>
 </head>
 <body>
-    <div id="root">
-        <h1>Quality Re-organization Tool</h1>
-        <p>Loading application...</p>
-    </div>
+    <div id="root"></div>
 
+    <!-- Library Imports -->
     <!-- React and ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
     <!-- Redux and React-Redux -->
     <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.umd.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@reduxjs/toolkit@2.0.1/dist/redux-toolkit.umd.min.js"></script>
     
     <!-- Material UI -->
     <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js" crossorigin></script>
     <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@mui/icons-material@5.15.3/index.js" crossorigin></script>
 
     <!-- Application Script -->
-    <script>
-        // Simple app initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            const rootElement = document.getElementById('root');
-            rootElement.innerHTML = `
-                <div style="text-align: center; padding: 50px;">
-                    <h1>Quality Re-organization Tool</h1>
-                    <p>Version 1.0</p>
-                    <div style="margin: 30px auto; max-width: 800px;">
-                        <p>This application requires proper initialization.</p>
-                        <p>Please contact your administrator to complete the setup.</p>
+    <script type="text/babel">
+        // Destructure React components
+        const { useState, useEffect } = React;
+        const { 
+            Button, AppBar, Toolbar, Typography, IconButton, Box, Tabs, Tab, 
+            Paper, Select, MenuItem, FormControl, InputLabel, 
+            Dialog, DialogTitle, DialogContent, DialogActions, TextField
+        } = MaterialUI;
+        
+        // Redux Store Setup
+        const { createSlice, configureStore, combineReducers } = RTK;
+
+        // Create a unique ID generator
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // Create Redux Slices
+        const focusFactorySlice = createSlice({
+            name: 'focusFactory',
+            initialState: {
+                currentFactory: 'ADD',
+                factories: ['ADD', 'BBV', 'SYN']
+            },
+            reducers: {
+                setCurrentFactory: (state, action) => {
+                    state.currentFactory = action.payload;
+                }
+            }
+        });
+
+        const phaseSlice = createSlice({
+            name: 'phase',
+            initialState: {
+                currentPhase: 'current',
+                phases: ['current', 'future']
+            },
+            reducers: {
+                setCurrentPhase: (state, action) => {
+                    state.currentPhase = action.payload;
+                }
+            }
+        });
+
+        const roleSlice = createSlice({
+            name: 'roles',
+            initialState: {
+                roles: {
+                    ADD: [
+                        { id: '1', title: 'Quality Manager', level: 'L5', department: 'Quality' },
+                        { id: '2', title: 'Quality Specialist', level: 'L3', department: 'Quality' },
+                        { id: '3', title: 'Quality Analyst', level: 'L2', department: 'Quality' }
+                    ],
+                    BBV: [
+                        { id: '4', title: 'Quality Director', level: 'L6', department: 'Quality' },
+                        { id: '5', title: 'Quality Supervisor', level: 'L4', department: 'Quality' }
+                    ],
+                    SYN: [
+                        { id: '6', title: 'Quality VP', level: 'L7', department: 'Quality' },
+                        { id: '7', title: 'Quality Associate', level: 'L1', department: 'Quality' }
+                    ]
+                }
+            },
+            reducers: {
+                addRole: (state, action) => {
+                    const { factory, role } = action.payload;
+                    role.id = generateId();
+                    state.roles[factory].push(role);
+                },
+                updateRole: (state, action) => {
+                    const { factory, role } = action.payload;
+                    const index = state.roles[factory].findIndex(r => r.id === role.id);
+                    if (index !== -1) {
+                        state.roles[factory][index] = role;
+                    }
+                },
+                deleteRole: (state, action) => {
+                    const { factory, roleId } = action.payload;
+                    state.roles[factory] = state.roles[factory].filter(role => role.id !== roleId);
+                }
+            }
+        });
+
+        const personnelSlice = createSlice({
+            name: 'personnel',
+            initialState: {
+                personnel: {
+                    ADD: [
+                        { id: '1', name: 'John Smith', role: '1', skills: ['GMP', 'Compliance'] },
+                        { id: '2', name: 'Jane Doe', role: '2', skills: ['Inspection', 'Documentation'] }
+                    ],
+                    BBV: [
+                        { id: '3', name: 'Robert Johnson', role: '4', skills: ['Leadership', 'Strategy'] },
+                        { id: '4', name: 'Emily Wilson', role: '5', skills: ['Training', 'Compliance'] }
+                    ],
+                    SYN: [
+                        { id: '5', name: 'Michael Brown', role: '6', skills: ['Executive Leadership'] },
+                        { id: '6', name: 'Sarah Garcia', role: '7', skills: ['Data Entry', 'Documentation'] }
+                    ]
+                }
+            },
+            reducers: {
+                addPersonnel: (state, action) => {
+                    const { factory, person } = action.payload;
+                    person.id = generateId();
+                    state.personnel[factory].push(person);
+                },
+                updatePersonnel: (state, action) => {
+                    const { factory, person } = action.payload;
+                    const index = state.personnel[factory].findIndex(p => p.id === person.id);
+                    if (index !== -1) {
+                        state.personnel[factory][index] = person;
+                    }
+                },
+                deletePersonnel: (state, action) => {
+                    const { factory, personId } = action.payload;
+                    state.personnel[factory] = state.personnel[factory].filter(person => person.id !== personId);
+                }
+            }
+        });
+
+        const orgChartSlice = createSlice({
+            name: 'orgChart',
+            initialState: {
+                orgCharts: {
+                    current: {
+                        ADD: {
+                            nodes: [
+                                { id: '1', roleId: '1', title: 'Quality Manager', x: 400, y: 50 },
+                                { id: '2', roleId: '2', title: 'Quality Specialist', x: 300, y: 150 },
+                                { id: '3', roleId: '3', title: 'Quality Analyst', x: 500, y: 150 }
+                            ],
+                            connections: [
+                                { id: '1', sourceId: '1', targetId: '2' },
+                                { id: '2', sourceId: '1', targetId: '3' }
+                            ]
+                        },
+                        BBV: {
+                            nodes: [
+                                { id: '4', roleId: '4', title: 'Quality Director', x: 400, y: 50 },
+                                { id: '5', roleId: '5', title: 'Quality Supervisor', x: 400, y: 150 }
+                            ],
+                            connections: [
+                                { id: '3', sourceId: '4', targetId: '5' }
+                            ]
+                        },
+                        SYN: {
+                            nodes: [
+                                { id: '6', roleId: '6', title: 'Quality VP', x: 400, y: 50 },
+                                { id: '7', roleId: '7', title: 'Quality Associate', x: 400, y: 150 }
+                            ],
+                            connections: [
+                                { id: '4', sourceId: '6', targetId: '7' }
+                            ]
+                        }
+                    },
+                    future: {
+                        ADD: { nodes: [], connections: [] },
+                        BBV: { nodes: [], connections: [] },
+                        SYN: { nodes: [], connections: [] }
+                    }
+                }
+            },
+            reducers: {
+                addNode: (state, action) => {
+                    const { phase, factory, node } = action.payload;
+                    node.id = generateId();
+                    state.orgCharts[phase][factory].nodes.push(node);
+                },
+                updateNodePosition: (state, action) => {
+                    const { phase, factory, nodeId, x, y } = action.payload;
+                    const node = state.orgCharts[phase][factory].nodes.find(n => n.id === nodeId);
+                    if (node) {
+                        node.x = x;
+                        node.y = y;
+                    }
+                },
+                deleteNode: (state, action) => {
+                    const { phase, factory, nodeId } = action.payload;
+                    state.orgCharts[phase][factory].nodes = state.orgCharts[phase][factory].nodes.filter(node => node.id !== nodeId);
+                    // Also remove any connections that include this node
+                    state.orgCharts[phase][factory].connections = state.orgCharts[phase][factory].connections.filter(
+                        conn => conn.sourceId !== nodeId && conn.targetId !== nodeId
+                    );
+                },
+                addConnection: (state, action) => {
+                    const { phase, factory, connection } = action.payload;
+                    connection.id = generateId();
+                    state.orgCharts[phase][factory].connections.push(connection);
+                },
+                deleteConnection: (state, action) => {
+                    const { phase, factory, connectionId } = action.payload;
+                    state.orgCharts[phase][factory].connections = state.orgCharts[phase][factory].connections.filter(
+                        conn => conn.id !== connectionId
+                    );
+                }
+            }
+        });
+
+        // Extract the action creators
+        const { setCurrentFactory } = focusFactorySlice.actions;
+        const { setCurrentPhase } = phaseSlice.actions;
+        const { addRole, updateRole, deleteRole } = roleSlice.actions;
+        const { addPersonnel, updatePersonnel, deletePersonnel } = personnelSlice.actions;
+        const { addNode, updateNodePosition, deleteNode, addConnection, deleteConnection } = orgChartSlice.actions;
+
+        // Combine reducers
+        const rootReducer = combineReducers({
+            focusFactory: focusFactorySlice.reducer,
+            phase: phaseSlice.reducer,
+            roles: roleSlice.reducer,
+            personnel: personnelSlice.reducer,
+            orgChart: orgChartSlice.reducer
+        });
+
+        // Create the Redux store
+        const store = configureStore({
+            reducer: rootReducer
+        });
+
+        // Components
+        const AppHeader = () => {
+            const [helpDialogOpen, setHelpDialogOpen] = useState(false);
+            
+            const handleHelpOpen = () => {
+                setHelpDialogOpen(true);
+            };
+            
+            const handleHelpClose = () => {
+                setHelpDialogOpen(false);
+            };
+            
+            return (
+                <div className="header">
+                    <div className="header-left">
+                        <Typography variant="h6">Quality Re-organization Tool</Typography>
+                        <span className="version-badge">v1.0</span>
+                    </div>
+                    <div className="header-right">
+                        <Button color="inherit" onClick={handleHelpOpen}>Help</Button>
+                    </div>
+                    
+                    <Dialog open={helpDialogOpen} onClose={handleHelpClose}>
+                        <DialogTitle>Help & Documentation</DialogTitle>
+                        <DialogContent>
+                            <Typography paragraph>
+                                Welcome to the Quality Re-organization Tool. This application allows you to:
+                            </Typography>
+                            <ul>
+                                <li>Define and manage quality roles</li>
+                                <li>Assign personnel to roles</li>
+                                <li>Create and modify organization charts</li>
+                                <li>Compare current and future organizational states</li>
+                            </ul>
+                            <Typography paragraph>
+                                Select a factory using the selector in the control bar, then use the tabs to access
+                                different features of the application.
+                            </Typography>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleHelpClose}>Close</Button>
+                        </DialogActions>
+                    </Dialog>
+                </div>
+            );
+        };
+
+        const FactorySelector = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const factories = useSelector(state => state.focusFactory.factories);
+            const dispatch = useDispatch();
+            
+            const handleChange = (event) => {
+                dispatch(setCurrentFactory(event.target.value));
+            };
+            
+            return (
+                <FormControl variant="outlined" size="small" style={{ minWidth: 120 }}>
+                    <InputLabel>Factory</InputLabel>
+                    <Select value={currentFactory} onChange={handleChange} label="Factory">
+                        {factories.map(factory => (
+                            <MenuItem key={factory} value={factory}>{factory}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            );
+        };
+
+        const PhaseSelector = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentPhase = useSelector(state => state.phase.currentPhase);
+            const phases = useSelector(state => state.phase.phases);
+            const dispatch = useDispatch();
+            
+            const handleChange = (event) => {
+                dispatch(setCurrentPhase(event.target.value));
+            };
+            
+            return (
+                <FormControl variant="outlined" size="small" style={{ minWidth: 120 }}>
+                    <InputLabel>Phase</InputLabel>
+                    <Select value={currentPhase} onChange={handleChange} label="Phase">
+                        {phases.map(phase => (
+                            <MenuItem key={phase} value={phase}>{phase.charAt(0).toUpperCase() + phase.slice(1)}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            );
+        };
+
+        const RoleList = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const roles = useSelector(state => state.roles.roles[currentFactory]);
+            const dispatch = useDispatch();
+            
+            const [dialogOpen, setDialogOpen] = useState(false);
+            const [currentRole, setCurrentRole] = useState({ title: '', level: '', department: '' });
+            const [isEdit, setIsEdit] = useState(false);
+            
+            const handleOpenDialog = (role = null) => {
+                if (role) {
+                    setCurrentRole({ ...role });
+                    setIsEdit(true);
+                } else {
+                    setCurrentRole({ title: '', level: '', department: '' });
+                    setIsEdit(false);
+                }
+                setDialogOpen(true);
+            };
+            
+            const handleCloseDialog = () => {
+                setDialogOpen(false);
+            };
+            
+            const handleSaveRole = () => {
+                if (isEdit) {
+                    dispatch(updateRole({ factory: currentFactory, role: currentRole }));
+                } else {
+                    dispatch(addRole({ factory: currentFactory, role: currentRole }));
+                }
+                setDialogOpen(false);
+            };
+            
+            const handleDeleteRole = (roleId) => {
+                dispatch(deleteRole({ factory: currentFactory, roleId }));
+            };
+            
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setCurrentRole(prev => ({ ...prev, [name]: value }));
+            };
+            
+            return (
+                <div>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6">Roles</Typography>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            color="primary" 
+                            onClick={() => handleOpenDialog()}
+                        >
+                            Add
+                        </Button>
+                    </Box>
+                    
+                    <div>
+                        {roles.map(role => (
+                            <div key={role.id} className="role-item">
+                                <Box display="flex" justifyContent="space-between">
+                                    <div>
+                                        <Typography variant="subtitle1">{role.title}</Typography>
+                                        <Typography variant="caption">{role.level} - {role.department}</Typography>
+                                    </div>
+                                    <div>
+                                        <IconButton size="small" onClick={() => handleOpenDialog(role)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>edit</span>
+                                        </IconButton>
+                                        <IconButton size="small" onClick={() => handleDeleteRole(role.id)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                        </IconButton>
+                                    </div>
+                                </Box>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <Dialog open={dialogOpen} onClose={handleCloseDialog}>
+                        <DialogTitle>{isEdit ? 'Edit Role' : 'Add Role'}</DialogTitle>
+                        <DialogContent>
+                            <TextField
+                                autoFocus
+                                margin="dense"
+                                name="title"
+                                label="Title"
+                                type="text"
+                                fullWidth
+                                value={currentRole.title}
+                                onChange={handleInputChange}
+                            />
+                            <TextField
+                                margin="dense"
+                                name="level"
+                                label="Level"
+                                type="text"
+                                fullWidth
+                                value={currentRole.level}
+                                onChange={handleInputChange}
+                            />
+                            <TextField
+                                margin="dense"
+                                name="department"
+                                label="Department"
+                                type="text"
+                                fullWidth
+                                value={currentRole.department}
+                                onChange={handleInputChange}
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleCloseDialog} color="primary">
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSaveRole} color="primary">
+                                Save
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </div>
+            );
+        };
+
+        const PersonnelList = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const personnel = useSelector(state => state.personnel.personnel[currentFactory]);
+            const roles = useSelector(state => state.roles.roles[currentFactory]);
+            const dispatch = useDispatch();
+            
+            const [dialogOpen, setDialogOpen] = useState(false);
+            const [currentPerson, setCurrentPerson] = useState({ name: '', role: '', skills: [] });
+            const [isEdit, setIsEdit] = useState(false);
+            
+            const handleOpenDialog = (person = null) => {
+                if (person) {
+                    setCurrentPerson({ ...person });
+                    setIsEdit(true);
+                } else {
+                    setCurrentPerson({ name: '', role: '', skills: [] });
+                    setIsEdit(false);
+                }
+                setDialogOpen(true);
+            };
+            
+            const handleCloseDialog = () => {
+                setDialogOpen(false);
+            };
+            
+            const handleSavePerson = () => {
+                if (isEdit) {
+                    dispatch(updatePersonnel({ factory: currentFactory, person: currentPerson }));
+                } else {
+                    dispatch(addPersonnel({ factory: currentFactory, person: currentPerson }));
+                }
+                setDialogOpen(false);
+            };
+            
+            const handleDeletePerson = (personId) => {
+                dispatch(deletePersonnel({ factory: currentFactory, personId }));
+            };
+            
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setCurrentPerson(prev => ({ ...prev, [name]: value }));
+            };
+            
+            const handleSkillsChange = (e) => {
+                const skills = e.target.value.split(',').map(skill => skill.trim());
+                setCurrentPerson(prev => ({ ...prev, skills }));
+            };
+            
+            const getRoleTitleById = (roleId) => {
+                const role = roles.find(r => r.id === roleId);
+                return role ? role.title : 'Unknown Role';
+            };
+            
+            return (
+                <div>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6">Personnel</Typography>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            color="primary" 
+                            onClick={() => handleOpenDialog()}
+                        >
+                            Add
+                        </Button>
+                    </Box>
+                    
+                    <div>
+                        {personnel.map(person => (
+                            <div key={person.id} className="personnel-item">
+                                <Box display="flex" justifyContent="space-between">
+                                    <div>
+                                        <Typography variant="subtitle1">{person.name}</Typography>
+                                        <Typography variant="caption">{getRoleTitleById(person.role)}</Typography>
+                                    </div>
+                                    <div>
+                                        <IconButton size="small" onClick={() => handleOpenDialog(person)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>edit</span>
+                                        </IconButton>
+                                        <IconButton size="small" onClick={() => handleDeletePerson(person.id)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                        </IconButton>
+                                    </div>
+                                </Box>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <Dialog open={dialogOpen} onClose={handleCloseDialog}>
+                        <DialogTitle>{isEdit ? 'Edit Personnel' : 'Add Personnel'}</DialogTitle>
+                        <DialogContent>
+                            <TextField
+                                autoFocus
+                                margin="dense"
+                                name="name"
+                                label="Name"
+                                type="text"
+                                fullWidth
+                                value={currentPerson.name}
+                                onChange={handleInputChange}
+                            />
+                            <FormControl fullWidth margin="dense">
+                                <InputLabel>Role</InputLabel>
+                                <Select
+                                    name="role"
+                                    value={currentPerson.role}
+                                    onChange={handleInputChange}
+                                >
+                                    {roles.map(role => (
+                                        <MenuItem key={role.id} value={role.id}>
+                                            {role.title}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                margin="dense"
+                                name="skills"
+                                label="Skills (comma-separated)"
+                                type="text"
+                                fullWidth
+                                value={currentPerson.skills.join(', ')}
+                                onChange={handleSkillsChange}
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleCloseDialog} color="primary">
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSavePerson} color="primary">
+                                Save
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </div>
+            );
+        };
+
+        const OrgChart = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const currentPhase = useSelector(state => state.phase.currentPhase);
+            const orgChart = useSelector(state => state.orgChart.orgCharts[currentPhase][currentFactory]);
+            const roles = useSelector(state => state.roles.roles[currentFactory]);
+            const dispatch = useDispatch();
+            
+            const [draggingNodeId, setDraggingNodeId] = useState(null);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            
+            const startDrag = (nodeId, e) => {
+                const node = orgChart.nodes.find(n => n.id === nodeId);
+                if (node) {
+                    setDraggingNodeId(nodeId);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDragOffset({
+                        x: e.clientX - rect.left,
+                        y: e.clientY - rect.top
+                    });
+                }
+            };
+            
+            const handleDrag = (e) => {
+                if (draggingNodeId) {
+                    const containerRect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - containerRect.left - dragOffset.x;
+                    const y = e.clientY - containerRect.top - dragOffset.y;
+                    
+                    dispatch(updateNodePosition({
+                        phase: currentPhase,
+                        factory: currentFactory,
+                        nodeId: draggingNodeId,
+                        x,
+                        y
+                    }));
+                }
+            };
+            
+            const stopDrag = () => {
+                setDraggingNodeId(null);
+            };
+            
+            const getRoleTitleById = (roleId) => {
+                const role = roles.find(r => r.id === roleId);
+                return role ? role.title : 'Unknown Role';
+            };
+            
+            const handleAddNode = () => {
+                const newNode = {
+                    roleId: roles[0]?.id || '',
+                    title: roles[0]?.title || 'New Role',
+                    x: 400,
+                    y: 100
+                };
+                
+                dispatch(addNode({
+                    phase: currentPhase,
+                    factory: currentFactory,
+                    node: newNode
+                }));
+            };
+            
+            return (
+                <div>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6">Organization Chart</Typography>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            color="primary" 
+                            onClick={handleAddNode}
+                        >
+                            Add Node
+                        </Button>
+                    </Box>
+                    
+                    <div 
+                        className="center-panel"
+                        onMouseMove={handleDrag}
+                        onMouseUp={stopDrag}
+                        onMouseLeave={stopDrag}
+                    >
+                        {/* Draw connections first so they appear behind nodes */}
+                        <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+                            {orgChart.connections.map(connection => {
+                                const sourceNode = orgChart.nodes.find(n => n.id === connection.sourceId);
+                                const targetNode = orgChart.nodes.find(n => n.id === connection.targetId);
+                                
+                                if (!sourceNode || !targetNode) return null;
+                                
+                                return (
+                                    <line 
+                                        key={connection.id}
+                                        x1={sourceNode.x + 100} 
+                                        y1={sourceNode.y + 25}
+                                        x2={targetNode.x + 100} 
+                                        y2={targetNode.y + 25}
+                                        stroke="#666"
+                                        strokeWidth="2"
+                                    />
+                                );
+                            })}
+                        </svg>
+                        
+                        {/* Draw all nodes */}
+                        {orgChart.nodes.map(node => (
+                            <div 
+                                key={node.id}
+                                className="org-node"
+                                style={{ 
+                                    left: `${node.x}px`, 
+                                    top: `${node.y}px`,
+                                    cursor: draggingNodeId === node.id ? 'grabbing' : 'grab'
+                                }}
+                                onMouseDown={(e) => startDrag(node.id, e)}
+                            >
+                                <Typography variant="subtitle1">{node.title}</Typography>
+                                <Typography variant="body2">{getRoleTitleById(node.roleId)}</Typography>
+                                <Box mt={1} display="flex" justifyContent="flex-end">
+                                    <IconButton 
+                                        size="small"
+                                        onClick={() => dispatch(deleteNode({
+                                            phase: currentPhase,
+                                            factory: currentFactory,
+                                            nodeId: node.id
+                                        }))}
+                                    >
+                                        <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                    </IconButton>
+                                </Box>
+                            </div>
+                        ))}
                     </div>
                 </div>
-            `;
-        });
+            );
+        };
+
+        const App = () => {
+            const [currentTab, setCurrentTab] = useState(0);
+            
+            const handleTabChange = (event, newValue) => {
+                setCurrentTab(newValue);
+            };
+            
+            return (
+                <div className="app-container">
+                    <AppHeader />
+                    
+                    <div className="main-content">
+                        <div className="control-bar">
+                            <FactorySelector />
+                            <PhaseSelector />
+                        </div>
+                        
+                        <div className="tab-panel">
+                            <Tabs value={currentTab} onChange={handleTabChange}>
+                                <Tab label="Organization Chart" />
+                                <Tab label="Roles & Personnel" />
+                            </Tabs>
+                        </div>
+                        
+                        {currentTab === 0 && (
+                            <OrgChart />
+                        )}
+                        
+                        {currentTab === 1 && (
+                            <div className="panel-container">
+                                <div className="left-panel">
+                                    <RoleList />
+                                </div>
+                                <div className="right-panel">
+                                    <PersonnelList />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the application
+        const { Provider } = ReactRedux;
+        ReactDOM.createRoot(document.getElementById('root')).render(
+            <Provider store={store}>
+                <App />
+            </Provider>
+        );
     </script>
 </body>
 </html> 
