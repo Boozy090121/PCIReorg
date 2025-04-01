@@ -182,24 +182,62 @@
 
     <!-- Library Imports -->
     <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
     <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
     
     <!-- Redux and Redux Toolkit -->
-    <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@reduxjs/toolkit@2.2.1/dist/redux-toolkit.umd.min.js" crossorigin></script>
-    
-    <!-- Material UI Dependencies -->
-    <script src="https://unpkg.com/@babel/runtime@7.23.9/umd/babel-runtime.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/redux@4.2.1/dist/redux.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-redux@8.1.2/dist/react-redux.min.js"></script>
     
     <!-- Material UI -->
-    <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/umd/material-ui.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+
+    <!-- Redux Toolkit Implementation -->
+    <script>
+        // Implement createSlice functionality
+        window.RTK = {
+            createSlice: function({ name, initialState, reducers }) {
+                const actionCreators = {};
+                const reducerMap = {};
+                
+                // Create action creators and reducers
+                Object.keys(reducers).forEach(key => {
+                    const type = `${name}/${key}`;
+                    actionCreators[key] = (payload) => ({ type, payload });
+                    reducerMap[type] = reducers[key];
+                });
+                
+                // Create the reducer function
+                const reducer = (state = initialState, action) => {
+                    const reducer = reducerMap[action.type];
+                    if (reducer) {
+                        // Create a mutable copy for easier state updates
+                        const newState = JSON.parse(JSON.stringify(state));
+                        reducer(newState, action);
+                        return newState;
+                    }
+                    return state;
+                };
+                
+                return {
+                    actions: actionCreators,
+                    reducer
+                };
+            },
+            configureStore: function({ reducer }) {
+                return Redux.createStore(
+                    typeof reducer === 'function' ? reducer : Redux.combineReducers(reducer),
+                    window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+                );
+            },
+            combineReducers: Redux.combineReducers
+        };
+    </script>
 
     <!-- Material Icons -->
     <!-- Use a simple script that sets a global variable for Material Icons -->
