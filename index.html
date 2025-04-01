@@ -35,6 +35,7 @@
         .header-right {
             display: flex;
             align-items: center;
+            gap: 12px;
         }
         .version-badge {
             background-color: rgba(255,255,255,0.2);
@@ -96,29 +97,138 @@
         .role-item:hover, .personnel-item:hover {
             background-color: #f0f7ff;
         }
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .login-form {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .user-menu {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-container {
+            background-color: white;
+            padding: 24px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .firebase-logo {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
     </style>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-analytics.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8v5Jwcc-73i3-CuZ70BH1EW_LsWuVs0Q",
+            authDomain: "reorg-cfa43.firebaseapp.com",
+            projectId: "reorg-cfa43",
+            storageBucket: "reorg-cfa43.firebasestorage.app",
+            messagingSenderId: "754287455974",
+            appId: "1:754287455974:web:fd00416f1ede3044db5527",
+            measurementId: "G-J9WN5L29Q7"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+    </script>
+
+    <!-- Firebase Service -->
+    <script src="firebase-service.js"></script>
 </head>
 <body>
     <div id="root"></div>
 
     <!-- Library Imports -->
-    <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- React and ReactDOM - use CDNs that support CORS -->
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
     <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
     
-    <!-- Redux and React-Redux -->
-    <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.umd.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@reduxjs/toolkit@2.0.1/dist/redux-toolkit.umd.min.js"></script>
+    <!-- Redux and React-Redux - use CDNs that support CORS -->
+    <script src="https://cdn.jsdelivr.net/npm/redux@4.2.1/dist/redux.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-redux@8.1.2/dist/react-redux.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/@reduxjs/toolkit@2.2.1/dist/redux-toolkit.umd.min.js" crossorigin></script>
     
     <!-- Material UI -->
-    <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@mui/icons-material@5.15.3/index.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/umd/material-ui.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emotion/react@11.11.1/dist/emotion-react.umd.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js" crossorigin></script>
+    
+    <!-- Material Icons -->
+    <!-- Use a simple script that sets a global variable for Material Icons -->
+    <script>
+        // Create a simple mock of the Material Icons 
+        window.MaterialUIIcons = {
+            // Create icon components as needed
+            AccountCircle: 'account_circle',
+            Menu: 'menu',
+            HelpOutline: 'help_outline',
+            Settings: 'settings',
+            ExitToApp: 'logout',
+            Info: 'info',
+            Add: 'add',
+            Delete: 'delete',
+            Edit: 'edit',
+            Save: 'save',
+            FileDownload: 'file_download',
+            FileUpload: 'file_upload'
+        };
+    </script>
+
+    <!-- User Management System -->
+    <script src="user-management.js"></script>
+
+    <!-- Initialize Firebase Service -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Firebase Service
+            window.initializeFirebaseService();
+        });
+    </script>
 
     <!-- Application Script -->
     <script type="text/babel">
@@ -127,14 +237,64 @@
         const { 
             Button, AppBar, Toolbar, Typography, IconButton, Box, Tabs, Tab, 
             Paper, Select, MenuItem, FormControl, InputLabel, 
-            Dialog, DialogTitle, DialogContent, DialogActions, TextField
+            Dialog, DialogTitle, DialogContent, DialogActions, TextField,
+            Menu, Divider, CircularProgress, Snackbar, Alert
         } = MaterialUI;
         
-        // Redux Store Setup
-        const { createSlice, configureStore, combineReducers } = RTK;
+        // Redux Store Setup - Fix RTK reference
+        const { createSlice, configureStore, combineReducers } = window.RTK || window.ReduxToolkit;
 
         // Create a unique ID generator
         const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // Loading Screen Component
+        const LoadingScreen = () => {
+            return (
+                <div className="loading-overlay">
+                    <div className="loading-container">
+                        <CircularProgress size={48} />
+                        <Typography variant="h6" style={{marginTop: 16}}>Loading...</Typography>
+                        <Typography variant="body2" color="textSecondary">Connecting to Firebase</Typography>
+                    </div>
+                </div>
+            );
+        };
+
+        // Create Redux Slices for Auth
+        const authSlice = createSlice({
+            name: 'auth',
+            initialState: {
+                isAuthenticated: false,
+                currentUser: null,
+                loading: true, // Start with loading true
+                error: null
+            },
+            reducers: {
+                loginStart: (state) => {
+                    state.loading = true;
+                    state.error = null;
+                },
+                loginSuccess: (state, action) => {
+                    state.isAuthenticated = true;
+                    state.currentUser = action.payload;
+                    state.loading = false;
+                    state.error = null;
+                },
+                loginFailure: (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                },
+                logout: (state) => {
+                    state.isAuthenticated = false;
+                    state.currentUser = null;
+                },
+                setLoading: (state, action) => {
+                    state.loading = action.payload;
+                }
+            }
+        });
+
+        const { loginStart, loginSuccess, loginFailure, logout, setLoading } = authSlice.actions;
 
         // Create Redux Slices
         const focusFactorySlice = createSlice({
@@ -198,6 +358,9 @@
                 deleteRole: (state, action) => {
                     const { factory, roleId } = action.payload;
                     state.roles[factory] = state.roles[factory].filter(role => role.id !== roleId);
+                },
+                setRoles: (state, action) => {
+                    state.roles = action.payload;
                 }
             }
         });
@@ -236,6 +399,9 @@
                 deletePersonnel: (state, action) => {
                     const { factory, personId } = action.payload;
                     state.personnel[factory] = state.personnel[factory].filter(person => person.id !== personId);
+                },
+                setPersonnel: (state, action) => {
+                    state.personnel = action.payload;
                 }
             }
         });
@@ -314,6 +480,33 @@
                     state.orgCharts[phase][factory].connections = state.orgCharts[phase][factory].connections.filter(
                         conn => conn.id !== connectionId
                     );
+                },
+                setOrgCharts: (state, action) => {
+                    state.orgCharts = action.payload;
+                }
+            }
+        });
+
+        // Create persistence slice 
+        const persistenceSlice = createSlice({
+            name: 'persistence',
+            initialState: {
+                notification: { show: false, message: '', type: 'info' },
+                lastSaved: null,
+                isSaving: false
+            },
+            reducers: {
+                setNotification: (state, action) => {
+                    state.notification = action.payload;
+                },
+                clearNotification: (state) => {
+                    state.notification.show = false;
+                },
+                updateLastSaved: (state) => {
+                    state.lastSaved = new Date().toISOString();
+                },
+                setSaving: (state, action) => {
+                    state.isSaving = action.payload;
                 }
             }
         });
@@ -321,23 +514,517 @@
         // Extract the action creators
         const { setCurrentFactory } = focusFactorySlice.actions;
         const { setCurrentPhase } = phaseSlice.actions;
-        const { addRole, updateRole, deleteRole } = roleSlice.actions;
-        const { addPersonnel, updatePersonnel, deletePersonnel } = personnelSlice.actions;
-        const { addNode, updateNodePosition, deleteNode, addConnection, deleteConnection } = orgChartSlice.actions;
+        const { addRole, updateRole, deleteRole, setRoles } = roleSlice.actions;
+        const { addPersonnel, updatePersonnel, deletePersonnel, setPersonnel } = personnelSlice.actions;
+        const { addNode, updateNodePosition, deleteNode, addConnection, deleteConnection, setOrgCharts } = orgChartSlice.actions;
+        const { setNotification, clearNotification, updateLastSaved, setSaving } = persistenceSlice.actions;
 
         // Combine reducers
         const rootReducer = combineReducers({
+            auth: authSlice.reducer,
             focusFactory: focusFactorySlice.reducer,
             phase: phaseSlice.reducer,
             roles: roleSlice.reducer,
             personnel: personnelSlice.reducer,
-            orgChart: orgChartSlice.reducer
+            orgChart: orgChartSlice.reducer,
+            persistence: persistenceSlice.reducer
         });
 
         // Create the Redux store
         const store = configureStore({
             reducer: rootReducer
         });
+
+        // Login Component
+        const Login = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const dispatch = useDispatch();
+            const { loading, error } = useSelector(state => state.auth);
+            
+            const [credentials, setCredentials] = useState({ email: '', password: '' });
+            const [registerMode, setRegisterMode] = useState(false);
+            const [registerData, setRegisterData] = useState({ email: '', password: '', confirmPassword: '', name: '' });
+            
+            const handleLoginInputChange = (e) => {
+                const { name, value } = e.target;
+                setCredentials(prev => ({ ...prev, [name]: value }));
+            };
+            
+            const handleRegisterInputChange = (e) => {
+                const { name, value } = e.target;
+                setRegisterData(prev => ({ ...prev, [name]: value }));
+            };
+            
+            const handleLogin = async () => {
+                dispatch(loginStart());
+                
+                const result = await window.FirebaseService.login(credentials.email, credentials.password);
+                
+                if (result.success) {
+                    dispatch(loginSuccess(result.user));
+                    
+                    // Load user data
+                    loadUserAppState();
+                } else {
+                    dispatch(loginFailure(result.message || 'Login failed'));
+                }
+            };
+            
+            const handleRegister = async () => {
+                // Validate password match
+                if (registerData.password !== registerData.confirmPassword) {
+                    dispatch(loginFailure('Passwords do not match'));
+                    return;
+                }
+                
+                dispatch(loginStart());
+                
+                const result = await window.FirebaseService.register(registerData);
+                
+                if (result.success) {
+                    dispatch(loginSuccess(result.user));
+                    
+                    // Initialize empty app state for new user
+                    saveUserAppState();
+                } else {
+                    dispatch(loginFailure(result.message || 'Registration failed'));
+                }
+            };
+            
+            const toggleMode = () => {
+                setRegisterMode(!registerMode);
+                dispatch(loginFailure(null)); // Clear any errors
+            };
+            
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    if (registerMode) {
+                        handleRegister();
+                    } else {
+                        handleLogin();
+                    }
+                }
+            };
+
+            return (
+                <div className="login-screen">
+                    <div className="login-form">
+                        <div className="login-header">
+                            <Typography variant="h5">Quality Re-organization Tool</Typography>
+                            <Typography variant="body2" color="textSecondary">v1.0</Typography>
+                            <Box display="flex" alignItems="center" justifyContent="center" mt={1}>
+                                <img src="https://www.gstatic.com/mobilesdk/160503_mobilesdk/logo/2x/firebase_96dp.png" 
+                                    alt="Firebase" className="firebase-logo" />
+                                <Typography variant="caption" color="textSecondary">
+                                    Powered by Firebase
+                                </Typography>
+                            </Box>
+                        </div>
+                        
+                        {registerMode ? (
+                            <>
+                                <Typography variant="h6" gutterBottom>Register</Typography>
+                                <TextField
+                                    label="Name"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    name="name"
+                                    value={registerData.name}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Email"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    name="email"
+                                    type="email"
+                                    value={registerData.email}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Password"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    type="password"
+                                    name="password"
+                                    value={registerData.password}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Confirm Password"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    type="password"
+                                    name="confirmPassword"
+                                    value={registerData.confirmPassword}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <Typography variant="h6" gutterBottom>Login</Typography>
+                                <TextField
+                                    label="Email"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    name="email"
+                                    type="email"
+                                    value={credentials.email}
+                                    onChange={handleLoginInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Password"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    type="password"
+                                    name="password"
+                                    value={credentials.password}
+                                    onChange={handleLoginInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                            </>
+                        )}
+                        
+                        {error && (
+                            <Typography color="error" variant="body2" style={{ marginTop: 16 }}>
+                                {error}
+                            </Typography>
+                        )}
+                        
+                        <Box mt={3} display="flex" justifyContent="space-between">
+                            <Button 
+                                color="primary" 
+                                onClick={toggleMode}
+                            >
+                                {registerMode ? 'Back to Login' : 'Create Account'}
+                            </Button>
+                            <Button 
+                                variant="contained" 
+                                color="primary"
+                                onClick={registerMode ? handleRegister : handleLogin}
+                                disabled={loading}
+                            >
+                                {loading ? <CircularProgress size={24} /> : (registerMode ? 'Register' : 'Login')}
+                            </Button>
+                        </Box>
+                    </div>
+                </div>
+            );
+        };
+
+        // User Menu Component
+        const UserMenu = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const dispatch = useDispatch();
+            const currentUser = useSelector(state => state.auth.currentUser);
+            const isSaving = useSelector(state => state.persistence.isSaving);
+            
+            const [anchorEl, setAnchorEl] = useState(null);
+            const [importDialogOpen, setImportDialogOpen] = useState(false);
+            const [importData, setImportData] = useState('');
+            
+            const handleMenuOpen = (event) => {
+                setAnchorEl(event.currentTarget);
+            };
+            
+            const handleMenuClose = () => {
+                setAnchorEl(null);
+            };
+            
+            const handleLogout = async () => {
+                // Save current state before logging out
+                await saveUserAppState();
+                
+                await window.FirebaseService.logout();
+                dispatch(logout());
+                handleMenuClose();
+            };
+            
+            const handleSaveData = async () => {
+                dispatch(setSaving(true));
+                await saveUserAppState();
+                dispatch(setSaving(false));
+                
+                dispatch(setNotification({
+                    show: true,
+                    message: 'Data saved to Firebase',
+                    type: 'success'
+                }));
+                handleMenuClose();
+            };
+            
+            const handleExportData = async () => {
+                dispatch(setSaving(true));
+                const data = await window.FirebaseService.exportUserData();
+                dispatch(setSaving(false));
+                
+                if (data) {
+                    // Create a download link for the data
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+                    downloadAnchorNode.setAttribute("download", `reorg_data_${currentUser.email.split('@')[0]}_${new Date().toISOString()}.json`);
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+                    
+                    handleMenuClose();
+                } else {
+                    dispatch(setNotification({
+                        show: true,
+                        message: 'No data to export',
+                        type: 'warning'
+                    }));
+                }
+            };
+            
+            const handleOpenImportDialog = () => {
+                setImportDialogOpen(true);
+                handleMenuClose();
+            };
+            
+            const handleCloseImportDialog = () => {
+                setImportDialogOpen(false);
+                setImportData('');
+            };
+            
+            const handleImportDataChange = (e) => {
+                setImportData(e.target.value);
+            };
+            
+            const handleImportData = async () => {
+                try {
+                    dispatch(setSaving(true));
+                    const result = await window.FirebaseService.importUserData(importData);
+                    
+                    if (result.success) {
+                        // Load the imported data into the Redux store
+                        await loadUserAppState();
+                        
+                        dispatch(setNotification({
+                            show: true,
+                            message: 'Data imported successfully',
+                            type: 'success'
+                        }));
+                    } else {
+                        dispatch(setNotification({
+                            show: true,
+                            message: result.message || 'Failed to import data',
+                            type: 'error'
+                        }));
+                    }
+                    dispatch(setSaving(false));
+                } catch (error) {
+                    dispatch(setNotification({
+                        show: true,
+                        message: 'Invalid data format',
+                        type: 'error'
+                    }));
+                    dispatch(setSaving(false));
+                }
+                
+                handleCloseImportDialog();
+            };
+            
+            return (
+                <>
+                    <div className="user-menu" onClick={handleMenuOpen}>
+                        {isSaving && <CircularProgress size={16} style={{marginRight: '8px'}} />}
+                        <span className="material-icons">account_circle</span>
+                        <Typography variant="body1">{currentUser?.name || currentUser?.email?.split('@')[0] || 'User'}</Typography>
+                    </div>
+                    
+                    <Menu
+                        anchorEl={anchorEl}
+                        open={Boolean(anchorEl)}
+                        onClose={handleMenuClose}
+                    >
+                        <MenuItem disabled>
+                            <Typography variant="body1">{currentUser?.name || currentUser?.email?.split('@')[0]}</Typography>
+                        </MenuItem>
+                        <MenuItem disabled>
+                            <Typography variant="caption">{currentUser?.email}</Typography>
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem onClick={handleSaveData} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>save</span>
+                            Save to Firebase
+                        </MenuItem>
+                        <MenuItem onClick={handleExportData} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>file_download</span>
+                            Export Data
+                        </MenuItem>
+                        <MenuItem onClick={handleOpenImportDialog} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>file_upload</span>
+                            Import Data
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem onClick={handleLogout} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>logout</span>
+                            Logout
+                        </MenuItem>
+                    </Menu>
+                    
+                    <Dialog open={importDialogOpen} onClose={handleCloseImportDialog}>
+                        <DialogTitle>Import Data</DialogTitle>
+                        <DialogContent>
+                            <Typography paragraph>
+                                Paste the exported JSON data below:
+                            </Typography>
+                            <TextField
+                                autoFocus
+                                multiline
+                                rows={10}
+                                fullWidth
+                                variant="outlined"
+                                value={importData}
+                                onChange={handleImportDataChange}
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleCloseImportDialog} color="primary">
+                                Cancel
+                            </Button>
+                            <Button 
+                                onClick={handleImportData} 
+                                color="primary"
+                                disabled={!importData || isSaving}
+                            >
+                                {isSaving ? <CircularProgress size={24} /> : 'Import'}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </>
+            );
+        };
+
+        // Notification Component
+        const NotificationSystem = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const dispatch = useDispatch();
+            const notification = useSelector(state => state.persistence.notification);
+            
+            const handleClose = (event, reason) => {
+                if (reason === 'clickaway') {
+                    return;
+                }
+                
+                dispatch(clearNotification());
+            };
+            
+            return (
+                <Snackbar
+                    open={notification.show}
+                    autoHideDuration={6000}
+                    onClose={handleClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <Alert onClose={handleClose} severity={notification.type} variant="filled">
+                        {notification.message}
+                    </Alert>
+                </Snackbar>
+            );
+        };
+
+        // Functions for saving and loading app state from Firebase
+        const saveUserAppState = async () => {
+            const state = store.getState();
+            const { auth, persistence, ...appState } = state;
+            
+            // Save to Firebase
+            const result = await window.FirebaseService.saveAppState(appState);
+            
+            if (result.success) {
+                store.dispatch(updateLastSaved());
+                return true;
+            } else {
+                store.dispatch(setNotification({
+                    show: true,
+                    message: result.message || 'Failed to save data',
+                    type: 'error'
+                }));
+                return false;
+            }
+        };
+        
+        const loadUserAppState = async () => {
+            try {
+                store.dispatch(setLoading(true));
+                
+                const savedState = await window.FirebaseService.loadAppState();
+                
+                if (savedState) {
+                    // Dispatch actions to set the state
+                    if (savedState.focusFactory) {
+                        store.dispatch(setCurrentFactory(savedState.focusFactory.currentFactory));
+                    }
+                    
+                    if (savedState.phase) {
+                        store.dispatch(setCurrentPhase(savedState.phase.currentPhase));
+                    }
+                    
+                    // Set all state data
+                    if (savedState.roles) {
+                        store.dispatch(setRoles(savedState.roles.roles));
+                    }
+                    
+                    if (savedState.personnel) {
+                        store.dispatch(setPersonnel(savedState.personnel.personnel));
+                    }
+                    
+                    if (savedState.orgChart) {
+                        store.dispatch(setOrgCharts(savedState.orgChart.orgCharts));
+                    }
+                    
+                    store.dispatch(setNotification({
+                        show: true,
+                        message: 'Data loaded from Firebase',
+                        type: 'info'
+                    }));
+                }
+                
+                store.dispatch(setLoading(false));
+                return true;
+            } catch (error) {
+                console.error('Error loading app state:', error);
+                store.dispatch(setNotification({
+                    show: true,
+                    message: 'Failed to load data: ' + error.message,
+                    type: 'error'
+                }));
+                store.dispatch(setLoading(false));
+                return false;
+            }
+        };
+
+        // Set up autosave
+        const setupAutosave = () => {
+            // Save state every 2 minutes
+            const autosaveInterval = setInterval(() => {
+                if (window.FirebaseService.isLoggedIn()) {
+                    saveUserAppState();
+                }
+            }, 2 * 60 * 1000);
+            
+            // Clear interval on page unload
+            window.addEventListener('beforeunload', () => {
+                clearInterval(autosaveInterval);
+                if (window.FirebaseService.isLoggedIn()) {
+                    saveUserAppState();
+                }
+            });
+        };
 
         // Components
         const AppHeader = () => {
@@ -359,6 +1046,7 @@
                     </div>
                     <div className="header-right">
                         <Button color="inherit" onClick={handleHelpOpen}>Help</Button>
+                        <UserMenu />
                     </div>
                     
                     <Dialog open={helpDialogOpen} onClose={handleHelpClose}>
@@ -376,6 +1064,10 @@
                             <Typography paragraph>
                                 Select a factory using the selector in the control bar, then use the tabs to access
                                 different features of the application.
+                            </Typography>
+                            <Typography paragraph>
+                                Your data is automatically saved to Firebase every 2 minutes.
+                                You can also manually save, export, and import your data using the user menu in the top right.
                             </Typography>
                         </DialogContent>
                         <DialogActions>
@@ -830,6 +1522,66 @@
             );
         };
 
+        // Main Application
+        const MainApp = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const { isAuthenticated, loading } = useSelector(state => state.auth);
+            const dispatch = useDispatch();
+            
+            useEffect(() => {
+                // Set up auth state change listener
+                const checkFirebaseReady = () => {
+                    if (window.FirebaseService) {
+                        // Check if user is already logged in
+                        const user = window.FirebaseService.getCurrentUser();
+                        if (user) {
+                            dispatch(loginSuccess(user));
+                            // Load user data
+                            loadUserAppState();
+                        } else {
+                            dispatch(setLoading(false));
+                        }
+                        
+                        // Set up autosave
+                        setupAutosave();
+                    } else {
+                        // Firebase not ready yet, check again in a moment
+                        setTimeout(checkFirebaseReady, 100);
+                    }
+                };
+                
+                // Start checking if Firebase is ready
+                checkFirebaseReady();
+                
+                // Listen for firebase-ready event
+                const handleFirebaseReady = () => {
+                    checkFirebaseReady();
+                };
+                document.addEventListener('firebase-ready', handleFirebaseReady);
+                
+                return () => {
+                    document.removeEventListener('firebase-ready', handleFirebaseReady);
+                };
+            }, []);
+            
+            if (loading) {
+                return <LoadingScreen />;
+            }
+            
+            if (!isAuthenticated) {
+                return <Login />;
+            }
+            
+            return (
+                <>
+                    <App />
+                    <NotificationSystem />
+                </>
+            );
+        };
+
+        // FactorySelector, PhaseSelector, and other components are unchanged from before
+
         const App = () => {
             const [currentTab, setCurrentTab] = useState(0);
             
@@ -877,7 +1629,7 @@
         const { Provider } = ReactRedux;
         ReactDOM.createRoot(document.getElementById('root')).render(
             <Provider store={store}>
-                <App />
+                <MainApp />
             </Provider>
         );
     </script>
