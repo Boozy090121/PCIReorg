@@ -9,8 +9,7 @@ export const usePersonnelMatching = (node, factory, phase) => {
   const personnel = useSelector(state => selectPersonnelByFactory(state, factory));
   
   const getPotentialMatchCount = (assignedRoles) => {
-    // Only look for matches if there's a vacancy (roles assigned but no personnel)
-    if (!(assignedRoles.length > 0 && (!node.personnel || node.personnel.length === 0))) return 0;
+    if (!assignedRoles || assignedRoles.length === 0) return 0;
     
     // Extract all required skills from assigned roles
     const requiredSkills = new Set();
@@ -20,8 +19,10 @@ export const usePersonnelMatching = (node, factory, phase) => {
       }
     });
     
-    // Count personnel with at least one matching skill
-    if (requiredSkills.size === 0) return personnel.length; // If no skills required, all personnel match
+    // If no skills required, all unassigned personnel are potential matches
+    if (requiredSkills.size === 0) {
+      return personnel.filter(person => !node.personnel?.includes(person.id)).length;
+    }
     
     // Count unassigned personnel with at least one matching skill
     return personnel.filter(person => {

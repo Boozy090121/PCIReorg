@@ -37,6 +37,10 @@ const OrgNode = ({
   const roles = useSelector(state => selectRolesByFactory(state, factory));
   const personnel = useSelector(state => selectPersonnelByFactory(state, factory));
   
+  // Find assigned roles and personnel
+  const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
+  const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
+  
   // Use our personnel matching hook
   const {
     matchingSuggestionsOpen,
@@ -46,21 +50,17 @@ const OrgNode = ({
     getPotentialMatchCount
   } = usePersonnelMatching(node, factory, phase);
   
-  // Find assigned roles and personnel
-  const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
-  const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
-  
   // Get the department of the node from the first assigned role (if any)
   const department = assignedRoles.length > 0 ? assignedRoles[0].department : '';
   
   // Determine if this node has a vacancy (roles assigned but no personnel)
-  const hasVacancy = assignedRoles.length > 0 && assignedPersonnel.length === 0 && visualSettings.highlightVacancies;
+  const hasVacancy = assignedRoles.length > 0 && assignedPersonnel.length === 0;
   
-  // Calculate vacancy details (if node has roles assigned but no personnel)
+  // Calculate vacancy details
   const vacancyDetails = {
-    hasVacancy: assignedRoles.length > 0 && assignedPersonnel.length === 0,
+    hasVacancy,
     roleCount: assignedRoles.length,
-    potentialMatches: getPotentialMatchCount(assignedRoles)
+    potentialMatches: hasVacancy ? getPotentialMatchCount(assignedRoles) : 0
   };
   
   const handleDelete = () => {
