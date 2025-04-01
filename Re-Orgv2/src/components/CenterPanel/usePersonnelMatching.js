@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateNode } from '../../features/orgChartSlice';
 import { selectPersonnelByFactory } from '../../features/personnelSlice';
+import { selectRolesByFactory } from '../../features/roleSlice';
 
-export const usePersonnelMatching = (node, factory, phase) => {
+export const usePersonnelMatching = (node, factory, phase, hasVacancy) => {
   const dispatch = useDispatch();
   
   // Add safety check for required props
@@ -20,30 +21,29 @@ export const usePersonnelMatching = (node, factory, phase) => {
 
   const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
   const personnel = useSelector(state => selectPersonnelByFactory(state, factory)) || [];
+  const roles = useSelector(state => selectRolesByFactory(state, factory)) || [];
   
-  const getPotentialMatchCount = (assignedRoles = []) => {
+  const getPotentialMatchCount = (assignedRoles = [], hasVacancyParam) => {
     try {
-      // Safety check for undefined/null inputs
-      if (!assignedRoles || !Array.isArray(assignedRoles) || assignedRoles.length === 0) {
+      // Return early if there's no vacancy
+      if (!hasVacancyParam) {
         return 0;
       }
-      
-      if (!Array.isArray(personnel)) {
-        return 0;
-      }
-      
-      // Ensure node.personnel is an array
-      const nodePersonnel = Array.isArray(node?.personnel) ? node.personnel : [];
       
       // Extract all required skills from assigned roles with additional safety checks
       const requiredSkills = new Set();
-      assignedRoles.forEach(role => {
-        if (role && Array.isArray(role.skills)) {
-          role.skills.forEach(skill => {
-            if (skill) requiredSkills.add(skill);
-          });
-        }
-      });
+      if (Array.isArray(assignedRoles)) {
+        assignedRoles.forEach(role => {
+          if (role && Array.isArray(role.skills)) {
+            role.skills.forEach(skill => {
+              if (skill) requiredSkills.add(skill);
+            });
+          }
+        });
+      }
+      
+      // Get current node's assigned personnel
+      const nodePersonnel = Array.isArray(node.personnel) ? node.personnel : [];
       
       // If no skills required, all unassigned personnel are potential matches
       if (requiredSkills.size === 0) {
@@ -64,7 +64,7 @@ export const usePersonnelMatching = (node, factory, phase) => {
         return person.skills.some(skill => skill && requiredSkills.has(skill));
       }).length;
     } catch (error) {
-      console.warn('Error in getPotentialMatchCount:', error);
+      console.error('Error calculating potential matches:', error);
       return 0;
     }
   };
@@ -77,37 +77,26 @@ export const usePersonnelMatching = (node, factory, phase) => {
     setMatchingSuggestionsOpen(false);
   };
   
-  const handleAssignPersonnel = (person) => {
-    if (!person || !person.id) {
-      console.warn('handleAssignPersonnel: Invalid person object', person);
-      return;
-    }
+  const handleAssignPersonnel = (personId) => {
+    // Get the current node's personnel
+    const currentPersonnel = Array.isArray(node.personnel) ? node.personnel : [];
     
-    try {
-      // Ensure node.personnel is an array
-      const currentPersonnel = Array.isArray(node?.personnel) ? node.personnel : [];
+    // Add the new person if they're not already assigned
+    if (!currentPersonnel.includes(personId)) {
+      const updatedPersonnel = [...currentPersonnel, personId];
       
-      // Add the personnel ID to the node's personnel array
-      const updatedPersonnel = [...currentPersonnel, person.id];
-      
-      // Create updated node
-      const updatedNode = {
-        ...node,
-        personnel: updatedPersonnel
-      };
-      
-      // Dispatch update action
+      // Update the node with the new personnel
       dispatch(updateNode({
         phase,
         factory,
-        node: updatedNode
+        node: {
+          ...node,
+          personnel: updatedPersonnel
+        }
       }));
-      
-      // Close the suggestions dialog
-      closeMatchingSuggestions();
-    } catch (error) {
-      console.warn('Error in handleAssignPersonnel:', error);
     }
+    
+    closeMatchingSuggestions();
   };
   
   return {

@@ -24,7 +24,8 @@ import {
   PersonAdd as PersonAddIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
+// Use the global ReactBeautifulDnD from CDN
+const { DragDropContext, Droppable } = window.ReactBeautifulDnD;
 import { selectOrgChart } from '../../features/orgChartSlice';
 import { selectCurrentFactory } from '../../features/focusFactorySlice';
 import { selectCurrentPhase } from '../../features/phaseSlice';

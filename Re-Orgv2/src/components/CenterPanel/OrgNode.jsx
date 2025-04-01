@@ -18,7 +18,8 @@ import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
-import { Draggable } from 'react-beautiful-dnd';
+// Use the global ReactBeautifulDnD from CDN
+const { Draggable } = window.ReactBeautifulDnD;
 import { selectRolesByFactory } from '../../features/roleSlice';
 import { selectPersonnelByFactory } from '../../features/personnelSlice';
 import { deleteNode } from '../../features/orgChartSlice';
@@ -64,10 +65,10 @@ const OrgNode = ({
     closeMatchingSuggestions,
     handleAssignPersonnel,
     getPotentialMatchCount
-  } = usePersonnelMatching(node, factory, phase);
+  } = usePersonnelMatching(node, factory, phase, hasVacancy);
   
   // Calculate potential matches if there's a vacancy
-  const potentialMatches = hasVacancy && Array.isArray(assignedRoles) ? getPotentialMatchCount(assignedRoles) : 0;
+  const potentialMatches = hasVacancy && Array.isArray(assignedRoles) ? getPotentialMatchCount(assignedRoles, hasVacancy) : 0;
   
   // Get the department of the node from the first assigned role (if any)
   const department = assignedRoles.length > 0 && assignedRoles[0]?.department || '';
