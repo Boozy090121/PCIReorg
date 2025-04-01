@@ -1,0 +1,15 @@
+# Netlify configuration file
+
+[build]
+  # No build command needed since we're using CDN links
+  publish = "."  # Publish the root directory
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[dev]
+  command = "echo 'No build process required'"
+  publish = "."
+  port = 8888 
