@@ -9,8 +9,6 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <!-- Material UI CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/dist/mui-material.min.css">
-    <!-- React Beautiful DND -->
-    <script src="https://cdn.jsdelivr.net/npm/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js"></script>
     <!-- Custom styles -->
     <style>
         body {
@@ -241,46 +239,107 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-analytics.js"></script>
 
-    <!-- Firebase Configuration -->
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyB8v5Jwcc-73i3-CuZ70BH1EW_LsWuVs0Q",
-            authDomain: "reorg-cfa43.firebaseapp.com",
-            projectId: "reorg-cfa43",
-            storageBucket: "reorg-cfa43.firebasestorage.app",
-            messagingSenderId: "754287455974",
-            appId: "1:754287455974:web:fd00416f1ede3044db5527",
-            measurementId: "G-J9WN5L29Q7"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        firebase.analytics();
-    </script>
-
-    <!-- Firebase Service -->
-    <script src="firebase-service.js"></script>
-</head>
-<body>
-    <div id="root"></div>
-
     <!-- Library Imports -->
     <!-- React and ReactDOM -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Development versions -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Production versions
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    -->
     
-    <!-- Babel for JSX -->
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <!-- Babel -->
+    <!-- Development version -->
+    <script src="https://unpkg.com/@babel/standalone/babel.js"></script>
+    <!-- Production version
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    -->
     
-    <!-- Redux and Redux Toolkit -->
-    <script src="https://cdn.jsdelivr.net/npm/redux@4.2.1/dist/redux.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-redux@8.1.2/dist/react-redux.min.js"></script>
+    <!-- Redux and React-Redux -->
+    <!-- Development versions -->
+    <script src="https://unpkg.com/redux@4.2.1/dist/redux.js"></script>
+    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.js"></script>
+    <!-- Production versions
+    <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js"></script>
+    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.min.js"></script>
+    -->
     
     <!-- Material UI -->
-    <script src="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/umd/material-ui.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+    <!-- Development versions -->
+    <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.development.js"></script>
+    <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.development.js"></script>
+    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.development.js"></script>
+    <!-- Production versions
+    <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.production.min.js"></script>
+    <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
+    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+    -->
+
+    <!-- React Beautiful DnD -->
+    <script>
+        // Try loading react-beautiful-dnd from different CDN sources
+        const loadReactBeautifulDnd = async () => {
+            const cdnSources = [
+                'https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.js',
+                'https://cdn.jsdelivr.net/npm/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/react-beautiful-dnd/13.1.1/beautiful-dnd.min.js'
+            ];
+
+            for (const source of cdnSources) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = source;
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                    console.log('Successfully loaded react-beautiful-dnd from:', source);
+                    return true;
+                } catch (error) {
+                    console.log('Failed to load from:', source);
+                }
+            }
+            return false;
+        };
+
+        // Initialize drag and drop system
+        const initializeDragAndDrop = async () => {
+            const success = await loadReactBeautifulDnd();
+            if (!success) {
+                console.log('Falling back to HTML5 drag and drop');
+                window.DndComponents = {
+                    DragDropContext: ({ children }) => children,
+                    Droppable: ({ children }) => children,
+                    Draggable: ({ children }) => children
+                };
+            } else {
+                window.DndComponents = window.ReactBeautifulDnd;
+            }
+            // Dispatch event to notify that drag and drop is ready
+            document.dispatchEvent(new Event('dnd-ready'));
+        };
+
+        // Start initialization
+        initializeDragAndDrop();
+    </script>
+
+    <!-- Initialize global variables -->
+    <script>
+        // Wait for drag and drop system to be ready
+        function waitForDnd(callback) {
+            if (window.DndComponents) {
+                callback();
+            } else {
+                document.addEventListener('dnd-ready', callback);
+            }
+        }
+
+        waitForDnd(() => {
+            console.log('Drag and drop system initialized');
+        });
+    </script>
 
     <!-- Redux Toolkit Implementation -->
     <script>
@@ -1628,126 +1687,6 @@
             );
         };
 
-        const OrgChart = () => {
-            const { useSelector, useDispatch } = ReactRedux;
-            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
-            const currentPhase = useSelector(state => state.phase.currentPhase);
-            const orgChart = useSelector(state => state.orgChart.orgCharts[currentPhase][currentFactory]);
-            const roles = useSelector(state => state.roles.roles[currentFactory]);
-            const dispatch = useDispatch();
-            
-            const [draggingNodeId, setDraggingNodeId] = useState(null);
-            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-            
-            const startDrag = (nodeId, e) => {
-                const node = orgChart.nodes.find(n => n.id === nodeId);
-                if (node) {
-                    setDraggingNodeId(nodeId);
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setDragOffset({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top
-                    });
-                }
-            };
-            
-            const handleDrag = (e) => {
-                if (draggingNodeId) {
-                    const containerRect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX - containerRect.left - dragOffset.x;
-                    const y = e.clientY - containerRect.top - dragOffset.y;
-                    
-                    dispatch(updateNodePosition({
-                        phase: currentPhase,
-                        factory: currentFactory,
-                        nodeId: draggingNodeId,
-                        x,
-                        y
-                    }));
-                }
-            };
-            
-            const stopDrag = () => {
-                setDraggingNodeId(null);
-            };
-            
-            const getRoleTitleById = (roleId) => {
-                const role = roles.find(r => r.id === roleId);
-                return role ? role.title : 'Unknown Role';
-            };
-            
-            const handleAddNode = () => {
-                const newNode = {
-                    roleId: roles[0]?.id || '',
-                    title: roles[0]?.title || 'New Role',
-                    x: 400,
-                    y: 100
-                };
-                
-                dispatch(addNode({
-                    phase: currentPhase,
-                    factory: currentFactory,
-                    node: newNode
-                }));
-            };
-            
-            return (
-                <div>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                        <Typography variant="h6">Organization Chart</Typography>
-                        <Button 
-                            variant="contained" 
-                            size="small" 
-                            color="primary" 
-                            onClick={handleAddNode}
-                        >
-                            Add Node
-                        </Button>
-                    </Box>
-                    
-                    <div 
-                        className="center-panel"
-                        onMouseMove={handleDrag}
-                        onMouseUp={stopDrag}
-                        onMouseLeave={stopDrag}
-                    >
-                        {/* Draw connections first so they appear behind nodes */}
-                        <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
-                            {orgChart.connections.map(connection => {
-                                const sourceNode = orgChart.nodes.find(n => n.id === connection.sourceId);
-                                const targetNode = orgChart.nodes.find(n => n.id === connection.targetId);
-                                
-                                if (!sourceNode || !targetNode) return null;
-                                
-                                return (
-                                    <line 
-                                        key={connection.id}
-                                        x1={sourceNode.x + 100} 
-                                        y1={sourceNode.y + 25}
-                                        x2={targetNode.x + 100} 
-                                        y2={targetNode.y + 25}
-                                        stroke="#666"
-                                        strokeWidth="2"
-                                    />
-                                );
-                            })}
-                        </svg>
-                        
-                        {/* Draw all nodes */}
-                        {orgChart.nodes.map(node => (
-                            <OrgNode 
-                                key={node.id}
-                                node={node}
-                                index={node.id}
-                                factory={currentFactory}
-                                phase={currentPhase}
-                            />
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
         const OrgNode = ({ node, index, factory, phase, visualSettings = {}, isHighlighted = false }) => {
             const dispatch = useDispatch();
             const roles = useSelector(state => state.roles.roles[factory]);
@@ -1755,9 +1694,37 @@
             
             // Dragging state
             const [isDragging, setIsDragging] = useState(false);
-            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-            const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
-            
+            const nodeRef = React.useRef(null);
+
+            // HTML5 Drag and Drop handlers
+            const handleDragStart = (e) => {
+                // Prevent dragging from buttons
+                if (e.target.closest('button')) {
+                    e.preventDefault();
+                    return;
+                }
+
+                setIsDragging(true);
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    nodeId: node.id,
+                    offsetX: e.clientX - e.target.getBoundingClientRect().left,
+                    offsetY: e.clientY - e.target.getBoundingClientRect().top
+                }));
+                e.dataTransfer.effectAllowed = 'move';
+
+                // Add a dragging class for styling
+                if (nodeRef.current) {
+                    nodeRef.current.classList.add('dragging');
+                }
+            };
+
+            const handleDragEnd = () => {
+                setIsDragging(false);
+                if (nodeRef.current) {
+                    nodeRef.current.classList.remove('dragging');
+                }
+            };
+
             // Find assigned roles and personnel
             const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
             const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
@@ -1813,72 +1780,6 @@
                 }));
             };
             
-            // Dragging handlers
-            const handleMouseDown = (e) => {
-                e.stopPropagation();
-                
-                // Only start drag on the node itself, not on buttons
-                if (e.target.closest('button')) {
-                    return;
-                }
-                
-                setIsDragging(true);
-                const rect = e.currentTarget.getBoundingClientRect();
-                setDragOffset({
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                });
-                
-                // Add event listeners to document for move and up events
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-            };
-            
-            const handleMouseMove = (e) => {
-                if (!isDragging) return;
-                
-                // Find the container element
-                const container = document.getElementById('org-chart-container');
-                if (!container) return;
-                
-                const containerRect = container.getBoundingClientRect();
-                
-                // Calculate new position
-                let newX = e.clientX - containerRect.left - dragOffset.x;
-                let newY = e.clientY - containerRect.top - dragOffset.y;
-                
-                // Account for current zoom level and pan position
-                const zoomLevel = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[3]) || 1;
-                const panX = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[4]) || 0;
-                const panY = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[5]) || 0;
-                
-                newX = (newX - panX) / zoomLevel;
-                newY = (newY - panY) / zoomLevel;
-                
-                // Ensure we don't go too far off-screen
-                newX = Math.max(newX, -200);
-                newY = Math.max(newY, -100);
-                
-                // Update node position in Redux
-                dispatch(updateNodePosition({
-                    phase,
-                    factory,
-                    nodeId: node.id,
-                    x: newX,
-                    y: newY
-                }));
-            };
-            
-            const handleMouseUp = () => {
-                if (!isDragging) return;
-                
-                setIsDragging(false);
-                
-                // Remove event listeners
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
-            
             // Get colors based on settings
             const getNodeBorderColor = () => {
                 if (visualSettings.customColors && visualSettings.borderColor) {
@@ -1927,8 +1828,12 @@
             return (
                 <>
                     <Paper
+                        ref={nodeRef}
                         className={`org-node ${factory}`}
                         elevation={isDragging ? 8 : isHighlighted ? 6 : 2}
+                        draggable="true"
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
                         sx={{
                             position: 'absolute',
                             top: node.y,
@@ -1946,7 +1851,6 @@
                             cursor: isDragging ? 'grabbing' : 'grab',
                             zIndex: isDragging ? 1000 : 1
                         }}
-                        onMouseDown={handleMouseDown}
                     >
                         <Box sx={{ 
                             display: 'flex', 
@@ -2381,6 +2285,121 @@
                         {rightPanel}
                     </Paper>
                 </Box>
+            );
+        };
+
+        const OrgChart = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const currentPhase = useSelector(state => state.phase.currentPhase);
+            const orgChart = useSelector(state => state.orgChart.orgCharts[currentPhase][currentFactory]);
+            const roles = useSelector(state => state.roles.roles[currentFactory]);
+            const dispatch = useDispatch();
+
+            // Handle dropping nodes
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                try {
+                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    const { nodeId, offsetX, offsetY } = data;
+                    
+                    if (!nodeId) return;
+
+                    const container = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - container.left - offsetX;
+                    const y = e.clientY - container.top - offsetY;
+
+                    dispatch(updateNodePosition({
+                        phase: currentPhase,
+                        factory: currentFactory,
+                        nodeId,
+                        x: Math.max(0, x),
+                        y: Math.max(0, y)
+                    }));
+                } catch (error) {
+                    console.error('Error handling drop:', error);
+                }
+            };
+
+            return (
+                <div>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6">Organization Chart</Typography>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            color="primary" 
+                            onClick={() => {
+                                const newNode = {
+                                    roleId: roles[0]?.id || '',
+                                    title: roles[0]?.title || 'New Role',
+                                    x: 400,
+                                    y: 100
+                                };
+                                dispatch(addNode({
+                                    phase: currentPhase,
+                                    factory: currentFactory,
+                                    node: newNode
+                                }));
+                            }}
+                        >
+                            Add Node
+                        </Button>
+                    </Box>
+                    
+                    <div 
+                        className="org-chart-container"
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        style={{
+                            position: 'relative',
+                            flex: 1,
+                            overflow: 'hidden',
+                            backgroundColor: '#f5f5f5',
+                            borderRadius: '8px',
+                            padding: '16px',
+                            minHeight: '500px'
+                        }}
+                    >
+                        {/* Draw connections */}
+                        <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+                            {orgChart.connections.map(connection => {
+                                const sourceNode = orgChart.nodes.find(n => n.id === connection.sourceId);
+                                const targetNode = orgChart.nodes.find(n => n.id === connection.targetId);
+                                
+                                if (!sourceNode || !targetNode) return null;
+                                
+                                return (
+                                    <line 
+                                        key={connection.id}
+                                        x1={sourceNode.x + 100} 
+                                        y1={sourceNode.y + 25}
+                                        x2={targetNode.x + 100} 
+                                        y2={targetNode.y + 25}
+                                        stroke="#666"
+                                        strokeWidth="2"
+                                    />
+                                );
+                            })}
+                        </svg>
+                        
+                        {/* Draw nodes */}
+                        {orgChart.nodes.map(node => (
+                            <OrgNode 
+                                key={node.id}
+                                node={node}
+                                index={node.id}
+                                factory={currentFactory}
+                                phase={currentPhase}
+                            />
+                        ))}
+                    </div>
+                </div>
             );
         };
 
