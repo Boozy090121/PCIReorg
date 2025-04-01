@@ -1763,39 +1763,44 @@
             // Get the department of the node from the first assigned role (if any)
             const department = assignedRoles.length > 0 ? assignedRoles[0].department : '';
             
-            // Determine if this node has a vacancy (no personnel assigned)
-            const hasVacancy = assignedPersonnel.length === 0 && visualSettings.highlightVacancies;
+            // First determine if this node has a vacancy (roles assigned but no personnel)
+            const hasRoles = Array.isArray(assignedRoles) && assignedRoles.length > 0;
+            const hasPersonnel = Array.isArray(assignedPersonnel) && assignedPersonnel.length > 0;
+            const hasVacancy = hasRoles && !hasPersonnel && visualSettings.highlightVacancies;
             
-            // Calculate vacancy details (if node has roles assigned but no personnel)
-            const vacancyDetails = {
-                hasVacancy: assignedRoles.length > 0 && assignedPersonnel.length === 0,
-                roleCount: assignedRoles.length,
-                potentialMatches: getPotentialMatchCount()
-            };
-            
-            function getPotentialMatchCount() {
-                if (!vacancyDetails.hasVacancy) return 0;
+            // Calculate potential matches if there's a vacancy
+            const potentialMatches = (() => {
+                if (!hasVacancy) return 0;
                 
-                // Extract all required skills from assigned roles
+                // Extract all required skills from assigned roles with additional safety checks
                 const requiredSkills = new Set();
                 assignedRoles.forEach(role => {
-                    if (role.skills) {
-                        role.skills.forEach(skill => requiredSkills.add(skill));
+                    if (role && Array.isArray(role.skills)) {
+                        role.skills.forEach(skill => {
+                            if (skill) requiredSkills.add(skill);
+                        });
                     }
                 });
                 
-                // Count personnel with at least one matching skill
-                if (requiredSkills.size === 0) return personnel.length;
+                // If no skills required, all unassigned personnel are potential matches
+                if (requiredSkills.size === 0) {
+                    return personnel.filter(person => 
+                        person && 
+                        person.id && 
+                        !assignedPersonnel.includes(person.id)
+                    ).length;
+                }
                 
                 // Count unassigned personnel with at least one matching skill
                 return personnel.filter(person => {
-                    if (node.personnel?.includes(person.id)) return false;
-                    if (!person.skills || person.skills.length === 0) return false;
+                    if (!person || !person.id) return false;
+                    if (assignedPersonnel.includes(person.id)) return false; // Skip if already assigned
+                    if (!Array.isArray(person.skills) || person.skills.length === 0) return false; // Skip if no skills
                     
                     // Check if any skills match
-                    return person.skills.some(skill => requiredSkills.has(skill));
+                    return person.skills.some(skill => skill && requiredSkills.has(skill));
                 }).length;
-            }
+            })();
             
             const handleDelete = (e) => {
                 e.stopPropagation();
@@ -1990,8 +1995,8 @@
                                             </Typography>
                                         </Box>
                                         
-                                        {/* Add the matching button if there are vacancies and roles assigned */}
-                                        {vacancyDetails.hasVacancy && vacancyDetails.potentialMatches > 0 && (
+                                        {/* Add the matching button if there are vacancies and potential matches */}
+                                        {hasVacancy && potentialMatches > 0 && (
                                             <Tooltip title="Find matching personnel">
                                                 <IconButton 
                                                     size="small" 
@@ -2002,7 +2007,7 @@
                                                     sx={{ p: 0.5 }}
                                                 >
                                                     <Badge 
-                                                        badgeContent={vacancyDetails.potentialMatches} 
+                                                        badgeContent={potentialMatches} 
                                                         color="primary"
                                                         overlap="circular"
                                                         sx={{ '& .MuiBadge-badge': { fontSize: '9px', height: '16px', minWidth: '16px' } }}
@@ -2042,7 +2047,7 @@
                                             </Box>
                                         ) : (
                                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {vacancyDetails.hasVacancy ? (
+                                                {hasVacancy ? (
                                                     <Box 
                                                         sx={{ 
                                                             display: 'flex', 
@@ -2059,7 +2064,7 @@
                                                             Vacancy
                                                         </Typography>
                                                         
-                                                        {vacancyDetails.potentialMatches > 0 && (
+                                                        {potentialMatches > 0 && (
                                                             <Button
                                                                 size="small"
                                                                 variant="text"
