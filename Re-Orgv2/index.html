@@ -1,0 +1,2388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Re-Org Application</title>
+    <!-- Add Material-UI fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <!-- Material UI CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/dist/mui-material.min.css">
+    <!-- Custom styles -->
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #1976d2;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .version-badge {
+            background-color: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 16px;
+            height: calc(100vh - 64px); /* Account for header */
+        }
+        .control-bar {
+            flex: 0 0 auto;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .tab-panel {
+            flex: 0 0 auto;
+            margin-bottom: 16px;
+        }
+        .panel-container {
+            flex: 1;
+            display: flex;
+            gap: 16px;
+            min-height: 0; /* Important for flex overflow */
+            overflow: hidden;
+        }
+        .left-panel, .right-panel {
+            width: 250px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .center-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 16px;
+            overflow: hidden;
+            min-width: 0;
+            height: 100%;
+        }
+        .org-chart-container {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .org-chart-canvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #fff;
+            background-image: linear-gradient(#f1f1f1 1px, transparent 1px), linear-gradient(90deg, #f1f1f1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .org-chart-canvas.dragging {
+            cursor: grabbing;
+        }
+        .org-node {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 12px;
+            background-color: white;
+            width: 240px;
+            min-height: 120px;
+            position: absolute;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            z-index: 1;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        .org-node:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            z-index: 2;
+        }
+        .org-node.dragging {
+            opacity: 0.8;
+            transform: scale(1.02);
+            z-index: 3;
+        }
+        .org-node.ADD {
+            border-color: #CC2030;
+        }
+        .org-node.BBV {
+            border-color: #00518A;
+        }
+        .org-node.SYN {
+            border-color: #232323;
+        }
+        .connection-line {
+            stroke: #666;
+            stroke-width: 2;
+            fill: none;
+            pointer-events: none;
+        }
+        .org-chart-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .role-item, .personnel-item {
+            padding: 8px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            background-color: white;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .role-item:hover, .personnel-item:hover {
+            background-color: #f0f7ff;
+        }
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .login-form {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .user-menu {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-container {
+            background-color: white;
+            padding: 24px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .firebase-logo {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
+        @media (max-width: 1024px) {
+            .panel-container {
+                flex-direction: column;
+                height: auto;
+            }
+            .left-panel, .center-panel, .right-panel {
+                width: 100%;
+                max-height: 40vh;
+            }
+        }
+    </style>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-analytics.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8v5Jwcc-73i3-CuZ70BH1EW_LsWuVs0Q",
+            authDomain: "reorg-cfa43.firebaseapp.com",
+            projectId: "reorg-cfa43",
+            storageBucket: "reorg-cfa43.firebasestorage.app",
+            messagingSenderId: "754287455974",
+            appId: "1:754287455974:web:fd00416f1ede3044db5527",
+            measurementId: "G-J9WN5L29Q7"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+    </script>
+
+    <!-- Firebase Service -->
+    <script src="firebase-service.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Library Imports -->
+    <!-- React and ReactDOM -->
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Redux and Redux Toolkit -->
+    <script src="https://cdn.jsdelivr.net/npm/redux@4.2.1/dist/redux.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-redux@8.1.2/dist/react-redux.min.js"></script>
+    
+    <!-- Material UI -->
+    <script src="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/umd/material-ui.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+
+    <!-- Redux Toolkit Implementation -->
+    <script>
+        // Implement createSlice functionality
+        window.RTK = {
+            createSlice: function({ name, initialState, reducers }) {
+                const actionCreators = {};
+                const reducerMap = {};
+                
+                // Create action creators and reducers
+                Object.keys(reducers).forEach(key => {
+                    const type = `${name}/${key}`;
+                    actionCreators[key] = (payload) => ({ type, payload });
+                    reducerMap[type] = reducers[key];
+                });
+                
+                // Create the reducer function
+                const reducer = (state = initialState, action) => {
+                    const reducer = reducerMap[action.type];
+                    if (reducer) {
+                        // Create a mutable copy for easier state updates
+                        const newState = JSON.parse(JSON.stringify(state));
+                        reducer(newState, action);
+                        return newState;
+                    }
+                    return state;
+                };
+                
+                return {
+                    actions: actionCreators,
+                    reducer
+                };
+            },
+            configureStore: function({ reducer }) {
+                return Redux.createStore(
+                    typeof reducer === 'function' ? reducer : Redux.combineReducers(reducer),
+                    window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+                );
+            },
+            combineReducers: Redux.combineReducers
+        };
+    </script>
+
+    <!-- Material Icons -->
+    <!-- Use a simple script that sets a global variable for Material Icons -->
+    <script>
+        // Create a simple mock of the Material Icons 
+        window.MaterialUIIcons = {
+            // Create icon components as needed
+            AccountCircle: 'account_circle',
+            Menu: 'menu',
+            HelpOutline: 'help_outline',
+            Settings: 'settings',
+            ExitToApp: 'logout',
+            Info: 'info',
+            Add: 'add',
+            Delete: 'delete',
+            Edit: 'edit',
+            Save: 'save',
+            FileDownload: 'file_download',
+            FileUpload: 'file_upload'
+        };
+    </script>
+
+    <!-- User Management System -->
+    <script src="user-management.js"></script>
+
+    <!-- Initialize Firebase Service -->
+    <script>
+        // Function to check if Firebase is loaded
+        function isFirebaseLoaded() {
+            const isLoaded = typeof firebase !== 'undefined' && firebase.app instanceof Function;
+            console.log('Firebase load check:', isLoaded ? 'Firebase is loaded' : 'Firebase is not loaded');
+            if (!isLoaded) {
+                console.log('Firebase state:', {
+                    isDefined: typeof firebase !== 'undefined',
+                    firebase: typeof firebase,
+                    hasApp: typeof firebase !== 'undefined' && firebase.app
+                });
+            }
+            return isLoaded;
+        }
+
+        // Function to initialize Firebase with retry
+        function initializeFirebaseWithRetry(maxRetries = 5, delay = 1000) {
+            let retries = 0;
+
+            function tryInitialize() {
+                console.log(`Attempting Firebase initialization (attempt ${retries + 1}/${maxRetries})`);
+                if (isFirebaseLoaded()) {
+                    try {
+                        // Initialize Firebase if not already initialized
+                        if (!firebase.apps.length) {
+                            console.log('Initializing new Firebase app with config:', {
+                                projectId: firebaseConfig.projectId,
+                                authDomain: firebaseConfig.authDomain
+                            });
+                            firebase.initializeApp(firebaseConfig);
+                            firebase.analytics();
+                        } else {
+                            console.log('Firebase app already initialized');
+                        }
+                        // Initialize our Firebase service
+                        window.initializeFirebaseService();
+                        console.log('Firebase successfully initialized');
+                    } catch (error) {
+                        console.error('Error initializing Firebase:', error);
+                        console.error('Stack trace:', error.stack);
+                        // If this was the last retry, show a more detailed error
+                        if (retries >= maxRetries - 1) {
+                            console.error('Firebase initialization failed after all retries. Current state:', {
+                                firebaseLoaded: isFirebaseLoaded(),
+                                apps: firebase?.apps?.length,
+                                hasAuth: typeof firebase?.auth === 'function',
+                                hasFirestore: typeof firebase?.firestore === 'function',
+                                hasAnalytics: typeof firebase?.analytics === 'function'
+                            });
+                        }
+                    }
+                } else {
+                    retries++;
+                    if (retries < maxRetries) {
+                        console.log(`Firebase not loaded yet, retrying in ${delay}ms... (${retries}/${maxRetries})`);
+                        setTimeout(tryInitialize, delay);
+                    } else {
+                        console.error('Failed to initialize Firebase after maximum retries');
+                        console.error('Final Firebase state:', {
+                            isDefined: typeof firebase !== 'undefined',
+                            firebase: typeof firebase,
+                            hasApp: typeof firebase !== 'undefined' && firebase.app
+                        });
+                    }
+                }
+            }
+
+            // Start initialization process
+            tryInitialize();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Starting Firebase initialization');
+            initializeFirebaseWithRetry();
+        });
+    </script>
+
+    <!-- Application Script -->
+    <script type="text/babel">
+        // Destructure React components and Redux
+        const { useState, useEffect } = React;
+        const { useSelector, useDispatch, Provider } = ReactRedux;
+        const { 
+            Button, AppBar, Toolbar, Typography, IconButton, Box, Tabs, Tab, 
+            Paper, Select, MenuItem, FormControl, InputLabel, 
+            Dialog, DialogTitle, DialogContent, DialogActions, TextField,
+            Menu, Divider, CircularProgress, Snackbar, Alert, Badge, Chip, Tooltip
+        } = MaterialUI;
+        
+        // Redux Store Setup
+        const { createSlice, configureStore, combineReducers } = RTK;
+
+        // Create a unique ID generator
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+
+        // Loading Screen Component
+        const LoadingScreen = () => {
+            return (
+                <div className="loading-overlay">
+                    <div className="loading-container">
+                        <CircularProgress size={48} />
+                        <Typography variant="h6" style={{marginTop: 16}}>Loading...</Typography>
+                        <Typography variant="body2" color="textSecondary">Connecting to Firebase</Typography>
+                    </div>
+                </div>
+            );
+        };
+
+        // Create Redux Slices for Auth
+        const authSlice = createSlice({
+            name: 'auth',
+            initialState: {
+                isAuthenticated: false,
+                currentUser: null,
+                loading: true, // Start with loading true
+                error: null
+            },
+            reducers: {
+                loginStart: (state) => {
+                    state.loading = true;
+                    state.error = null;
+                },
+                loginSuccess: (state, action) => {
+                    state.isAuthenticated = true;
+                    state.currentUser = action.payload;
+                    state.loading = false;
+                    state.error = null;
+                },
+                loginFailure: (state, action) => {
+                    state.loading = false;
+                    state.error = action.payload;
+                },
+                logout: (state) => {
+                    state.isAuthenticated = false;
+                    state.currentUser = null;
+                },
+                setLoading: (state, action) => {
+                    state.loading = action.payload;
+                }
+            }
+        });
+
+        const { loginStart, loginSuccess, loginFailure, logout, setLoading } = authSlice.actions;
+
+        // Create Redux Slices
+        const focusFactorySlice = createSlice({
+            name: 'focusFactory',
+            initialState: {
+                currentFactory: 'ADD',
+                factories: ['ADD', 'BBV', 'SYN']
+            },
+            reducers: {
+                setCurrentFactory: (state, action) => {
+                    state.currentFactory = action.payload;
+                }
+            }
+        });
+
+        const phaseSlice = createSlice({
+            name: 'phase',
+            initialState: {
+                currentPhase: 'current',
+                phases: ['current', 'future']
+            },
+            reducers: {
+                setCurrentPhase: (state, action) => {
+                    state.currentPhase = action.payload;
+                }
+            }
+        });
+
+        const roleSlice = createSlice({
+            name: 'roles',
+            initialState: {
+                roles: {
+                    ADD: [
+                        { id: '1', title: 'Quality Manager', level: 'L5', department: 'Quality' },
+                        { id: '2', title: 'Quality Specialist', level: 'L3', department: 'Quality' },
+                        { id: '3', title: 'Quality Analyst', level: 'L2', department: 'Quality' }
+                    ],
+                    BBV: [
+                        { id: '4', title: 'Quality Director', level: 'L6', department: 'Quality' },
+                        { id: '5', title: 'Quality Supervisor', level: 'L4', department: 'Quality' }
+                    ],
+                    SYN: [
+                        { id: '6', title: 'Quality VP', level: 'L7', department: 'Quality' },
+                        { id: '7', title: 'Quality Associate', level: 'L1', department: 'Quality' }
+                    ]
+                }
+            },
+            reducers: {
+                addRole: (state, action) => {
+                    const { factory, role } = action.payload;
+                    role.id = generateId();
+                    state.roles[factory].push(role);
+                },
+                updateRole: (state, action) => {
+                    const { factory, role } = action.payload;
+                    const index = state.roles[factory].findIndex(r => r.id === role.id);
+                    if (index !== -1) {
+                        state.roles[factory][index] = role;
+                    }
+                },
+                deleteRole: (state, action) => {
+                    const { factory, roleId } = action.payload;
+                    state.roles[factory] = state.roles[factory].filter(role => role.id !== roleId);
+                },
+                setRoles: (state, action) => {
+                    state.roles = action.payload;
+                }
+            }
+        });
+
+        const personnelSlice = createSlice({
+            name: 'personnel',
+            initialState: {
+                personnel: {
+                    ADD: [
+                        { id: '1', name: 'John Smith', role: '1', skills: ['GMP', 'Compliance'] },
+                        { id: '2', name: 'Jane Doe', role: '2', skills: ['Inspection', 'Documentation'] }
+                    ],
+                    BBV: [
+                        { id: '3', name: 'Robert Johnson', role: '4', skills: ['Leadership', 'Strategy'] },
+                        { id: '4', name: 'Emily Wilson', role: '5', skills: ['Training', 'Compliance'] }
+                    ],
+                    SYN: [
+                        { id: '5', name: 'Michael Brown', role: '6', skills: ['Executive Leadership'] },
+                        { id: '6', name: 'Sarah Garcia', role: '7', skills: ['Data Entry', 'Documentation'] }
+                    ]
+                }
+            },
+            reducers: {
+                addPersonnel: (state, action) => {
+                    const { factory, person } = action.payload;
+                    person.id = generateId();
+                    state.personnel[factory].push(person);
+                },
+                updatePersonnel: (state, action) => {
+                    const { factory, person } = action.payload;
+                    const index = state.personnel[factory].findIndex(p => p.id === person.id);
+                    if (index !== -1) {
+                        state.personnel[factory][index] = person;
+                    }
+                },
+                deletePersonnel: (state, action) => {
+                    const { factory, personId } = action.payload;
+                    state.personnel[factory] = state.personnel[factory].filter(person => person.id !== personId);
+                },
+                setPersonnel: (state, action) => {
+                    state.personnel = action.payload;
+                }
+            }
+        });
+
+        const orgChartSlice = createSlice({
+            name: 'orgChart',
+            initialState: {
+                orgCharts: {
+                    current: {
+                        ADD: {
+                            nodes: [
+                                { id: '1', roleId: '1', title: 'Quality Manager', x: 400, y: 50 },
+                                { id: '2', roleId: '2', title: 'Quality Specialist', x: 300, y: 150 },
+                                { id: '3', roleId: '3', title: 'Quality Analyst', x: 500, y: 150 }
+                            ],
+                            connections: [
+                                { id: '1', sourceId: '1', targetId: '2' },
+                                { id: '2', sourceId: '1', targetId: '3' }
+                            ]
+                        },
+                        BBV: {
+                            nodes: [
+                                { id: '4', roleId: '4', title: 'Quality Director', x: 400, y: 50 },
+                                { id: '5', roleId: '5', title: 'Quality Supervisor', x: 400, y: 150 }
+                            ],
+                            connections: [
+                                { id: '3', sourceId: '4', targetId: '5' }
+                            ]
+                        },
+                        SYN: {
+                            nodes: [
+                                { id: '6', roleId: '6', title: 'Quality VP', x: 400, y: 50 },
+                                { id: '7', roleId: '7', title: 'Quality Associate', x: 400, y: 150 }
+                            ],
+                            connections: [
+                                { id: '4', sourceId: '6', targetId: '7' }
+                            ]
+                        }
+                    },
+                    future: {
+                        ADD: { nodes: [], connections: [] },
+                        BBV: { nodes: [], connections: [] },
+                        SYN: { nodes: [], connections: [] }
+                    }
+                }
+            },
+            reducers: {
+                addNode: (state, action) => {
+                    const { phase, factory, node } = action.payload;
+                    node.id = generateId();
+                    state.orgCharts[phase][factory].nodes.push(node);
+                },
+                updateNodePosition: (state, action) => {
+                    const { phase, factory, nodeId, x, y } = action.payload;
+                    const node = state.orgCharts[phase][factory].nodes.find(n => n.id === nodeId);
+                    if (node) {
+                        node.x = x;
+                        node.y = y;
+                    }
+                },
+                deleteNode: (state, action) => {
+                    const { phase, factory, nodeId } = action.payload;
+                    state.orgCharts[phase][factory].nodes = state.orgCharts[phase][factory].nodes.filter(node => node.id !== nodeId);
+                    // Also remove any connections that include this node
+                    state.orgCharts[phase][factory].connections = state.orgCharts[phase][factory].connections.filter(
+                        conn => conn.sourceId !== nodeId && conn.targetId !== nodeId
+                    );
+                },
+                addConnection: (state, action) => {
+                    const { phase, factory, connection } = action.payload;
+                    connection.id = generateId();
+                    state.orgCharts[phase][factory].connections.push(connection);
+                },
+                deleteConnection: (state, action) => {
+                    const { phase, factory, connectionId } = action.payload;
+                    state.orgCharts[phase][factory].connections = state.orgCharts[phase][factory].connections.filter(
+                        conn => conn.id !== connectionId
+                    );
+                },
+                setOrgCharts: (state, action) => {
+                    state.orgCharts = action.payload;
+                }
+            }
+        });
+
+        // Create persistence slice 
+        const persistenceSlice = createSlice({
+            name: 'persistence',
+            initialState: {
+                notification: { show: false, message: '', type: 'info' },
+                lastSaved: null,
+                isSaving: false
+            },
+            reducers: {
+                setNotification: (state, action) => {
+                    state.notification = action.payload;
+                },
+                clearNotification: (state) => {
+                    state.notification.show = false;
+                },
+                updateLastSaved: (state) => {
+                    state.lastSaved = new Date().toISOString();
+                },
+                setSaving: (state, action) => {
+                    state.isSaving = action.payload;
+                }
+            }
+        });
+
+        // Extract the action creators
+        const { setCurrentFactory } = focusFactorySlice.actions;
+        const { setCurrentPhase } = phaseSlice.actions;
+        const { addRole, updateRole, deleteRole, setRoles } = roleSlice.actions;
+        const { addPersonnel, updatePersonnel, deletePersonnel, setPersonnel } = personnelSlice.actions;
+        const { addNode, updateNodePosition, deleteNode, addConnection, deleteConnection, setOrgCharts } = orgChartSlice.actions;
+        const { setNotification, clearNotification, updateLastSaved, setSaving } = persistenceSlice.actions;
+
+        // Combine reducers
+        const rootReducer = combineReducers({
+            auth: authSlice.reducer,
+            focusFactory: focusFactorySlice.reducer,
+            phase: phaseSlice.reducer,
+            roles: roleSlice.reducer,
+            personnel: personnelSlice.reducer,
+            orgChart: orgChartSlice.reducer,
+            persistence: persistenceSlice.reducer
+        });
+
+        // Create the Redux store
+        const store = configureStore({
+            reducer: rootReducer
+        });
+
+        // Login Component
+        const Login = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const dispatch = useDispatch();
+            const { loading, error } = useSelector(state => state.auth);
+            
+            const [credentials, setCredentials] = useState({ email: '', password: '' });
+            const [registerMode, setRegisterMode] = useState(false);
+            const [registerData, setRegisterData] = useState({ email: '', password: '', confirmPassword: '', name: '' });
+            
+            const handleLoginInputChange = (e) => {
+                const { name, value } = e.target;
+                setCredentials(prev => ({ ...prev, [name]: value }));
+            };
+            
+            const handleRegisterInputChange = (e) => {
+                const { name, value } = e.target;
+                setRegisterData(prev => ({ ...prev, [name]: value }));
+            };
+            
+            const handleLogin = async () => {
+                if (!credentials.email || !credentials.password) {
+                    dispatch(loginFailure('Please enter both email and password'));
+                    return;
+                }
+
+                dispatch(loginStart());
+                
+                try {
+                    const result = await window.FirebaseService.login(credentials.email, credentials.password);
+                    
+                    if (result.success) {
+                        dispatch(loginSuccess(result.user));
+                        // Load user data
+                        loadUserAppState();
+                    } else {
+                        let errorMessage = result.message || 'Login failed';
+                        // Make error messages more user-friendly
+                        if (errorMessage.includes('CONFIGURATION_NOT_FOUND')) {
+                            errorMessage = 'Authentication service is not properly configured. Please contact support.';
+                        } else if (errorMessage.includes('auth/user-not-found')) {
+                            errorMessage = 'No account found with this email address';
+                        } else if (errorMessage.includes('auth/wrong-password')) {
+                            errorMessage = 'Incorrect password';
+                        } else if (errorMessage.includes('auth/invalid-email')) {
+                            errorMessage = 'Invalid email address format';
+                        }
+                        dispatch(loginFailure(errorMessage));
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    dispatch(loginFailure('An unexpected error occurred. Please try again.'));
+                }
+            };
+            
+            const handleRegister = async () => {
+                // Validate inputs
+                if (!registerData.email || !registerData.password || !registerData.name) {
+                    dispatch(loginFailure('Please fill in all fields'));
+                    return;
+                }
+
+                // Validate password match
+                if (registerData.password !== registerData.confirmPassword) {
+                    dispatch(loginFailure('Passwords do not match'));
+                    return;
+                }
+
+                // Validate password strength
+                if (registerData.password.length < 6) {
+                    dispatch(loginFailure('Password must be at least 6 characters long'));
+                    return;
+                }
+                
+                dispatch(loginStart());
+                
+                try {
+                    const result = await window.FirebaseService.register(registerData);
+                    
+                    if (result.success) {
+                        dispatch(loginSuccess(result.user));
+                        // Initialize empty app state for new user
+                        saveUserAppState();
+                    } else {
+                        let errorMessage = result.message || 'Registration failed';
+                        // Make error messages more user-friendly
+                        if (errorMessage.includes('CONFIGURATION_NOT_FOUND')) {
+                            errorMessage = 'Authentication service is not properly configured. Please contact support.';
+                        } else if (errorMessage.includes('auth/email-already-in-use')) {
+                            errorMessage = 'An account already exists with this email address';
+                        } else if (errorMessage.includes('auth/invalid-email')) {
+                            errorMessage = 'Invalid email address format';
+                        } else if (errorMessage.includes('auth/weak-password')) {
+                            errorMessage = 'Password is too weak. Please use a stronger password';
+                        }
+                        dispatch(loginFailure(errorMessage));
+                    }
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    dispatch(loginFailure('An unexpected error occurred. Please try again.'));
+                }
+            };
+            
+            const toggleMode = () => {
+                setRegisterMode(!registerMode);
+                dispatch(loginFailure(null)); // Clear any errors
+            };
+            
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    if (registerMode) {
+                        handleRegister();
+                    } else {
+                        handleLogin();
+                    }
+                }
+            };
+
+            return (
+                <div className="login-screen">
+                    <div className="login-form">
+                        <div className="login-header">
+                            <Typography variant="h5">Quality Re-organization Tool</Typography>
+                            <Typography variant="body2" color="textSecondary">v1.0</Typography>
+                            <Box display="flex" alignItems="center" justifyContent="center" mt={1}>
+                                <img src="https://www.gstatic.com/mobilesdk/160503_mobilesdk/logo/2x/firebase_96dp.png" 
+                                    alt="Firebase" className="firebase-logo" />
+                                <Typography variant="caption" color="textSecondary">
+                                    Powered by Firebase
+                                </Typography>
+                            </Box>
+                        </div>
+                        
+                        {registerMode ? (
+                            <>
+                                <Typography variant="h6" gutterBottom>Register</Typography>
+                                <TextField
+                                    label="Name"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    name="name"
+                                    value={registerData.name}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Email"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    name="email"
+                                    type="email"
+                                    value={registerData.email}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Password"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    type="password"
+                                    name="password"
+                                    value={registerData.password}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Confirm Password"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    type="password"
+                                    name="confirmPassword"
+                                    value={registerData.confirmPassword}
+                                    onChange={handleRegisterInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <Typography variant="h6" gutterBottom>Login</Typography>
+                                <TextField
+                                    label="Email"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    name="email"
+                                    type="email"
+                                    value={credentials.email}
+                                    onChange={handleLoginInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                                <TextField
+                                    label="Password"
+                                    variant="outlined"
+                                    fullWidth
+                                    margin="normal"
+                                    type="password"
+                                    name="password"
+                                    value={credentials.password}
+                                    onChange={handleLoginInputChange}
+                                    onKeyDown={handleKeyDown}
+                                />
+                            </>
+                        )}
+                        
+                        {error && (
+                            <Typography color="error" variant="body2" style={{ marginTop: 16 }}>
+                                {error}
+                            </Typography>
+                        )}
+                        
+                        <Box mt={3} display="flex" justifyContent="space-between">
+                            <Button 
+                                color="primary" 
+                                onClick={toggleMode}
+                            >
+                                {registerMode ? 'Back to Login' : 'Create Account'}
+                            </Button>
+                            <Button 
+                                variant="contained" 
+                                color="primary"
+                                onClick={registerMode ? handleRegister : handleLogin}
+                                disabled={loading}
+                            >
+                                {loading ? <CircularProgress size={24} /> : (registerMode ? 'Register' : 'Login')}
+                            </Button>
+                        </Box>
+                    </div>
+                </div>
+            );
+        };
+
+        // User Menu Component
+        const UserMenu = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const dispatch = useDispatch();
+            const currentUser = useSelector(state => state.auth.currentUser);
+            const isSaving = useSelector(state => state.persistence.isSaving);
+            
+            const [anchorEl, setAnchorEl] = useState(null);
+            const [importDialogOpen, setImportDialogOpen] = useState(false);
+            const [importData, setImportData] = useState('');
+            
+            const handleMenuOpen = (event) => {
+                setAnchorEl(event.currentTarget);
+            };
+            
+            const handleMenuClose = () => {
+                setAnchorEl(null);
+            };
+            
+            const handleLogout = async () => {
+                // Save current state before logging out
+                await saveUserAppState();
+                
+                await window.FirebaseService.logout();
+                dispatch(logout());
+                handleMenuClose();
+            };
+            
+            const handleSaveData = async () => {
+                dispatch(setSaving(true));
+                await saveUserAppState();
+                dispatch(setSaving(false));
+                
+                dispatch(setNotification({
+                    show: true,
+                    message: 'Data saved to Firebase',
+                    type: 'success'
+                }));
+                handleMenuClose();
+            };
+            
+            const handleExportData = async () => {
+                dispatch(setSaving(true));
+                const data = await window.FirebaseService.exportUserData();
+                dispatch(setSaving(false));
+                
+                if (data) {
+                    // Create a download link for the data
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+                    downloadAnchorNode.setAttribute("download", `reorg_data_${currentUser.email.split('@')[0]}_${new Date().toISOString()}.json`);
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+                    
+                    handleMenuClose();
+                } else {
+                    dispatch(setNotification({
+                        show: true,
+                        message: 'No data to export',
+                        type: 'warning'
+                    }));
+                }
+            };
+            
+            const handleOpenImportDialog = () => {
+                setImportDialogOpen(true);
+                handleMenuClose();
+            };
+            
+            const handleCloseImportDialog = () => {
+                setImportDialogOpen(false);
+                setImportData('');
+            };
+            
+            const handleImportDataChange = (e) => {
+                setImportData(e.target.value);
+            };
+            
+            const handleImportData = async () => {
+                try {
+                    dispatch(setSaving(true));
+                    const result = await window.FirebaseService.importUserData(importData);
+                    
+                    if (result.success) {
+                        // Load the imported data into the Redux store
+                        await loadUserAppState();
+                        
+                        dispatch(setNotification({
+                            show: true,
+                            message: 'Data imported successfully',
+                            type: 'success'
+                        }));
+                    } else {
+                        dispatch(setNotification({
+                            show: true,
+                            message: result.message || 'Failed to import data',
+                            type: 'error'
+                        }));
+                    }
+                    dispatch(setSaving(false));
+                } catch (error) {
+                    dispatch(setNotification({
+                        show: true,
+                        message: 'Invalid data format',
+                        type: 'error'
+                    }));
+                    dispatch(setSaving(false));
+                }
+                
+                handleCloseImportDialog();
+            };
+            
+            return (
+                <>
+                    <div className="user-menu" onClick={handleMenuOpen}>
+                        {isSaving && <CircularProgress size={16} style={{marginRight: '8px'}} />}
+                        <span className="material-icons">account_circle</span>
+                        <Typography variant="body1">{currentUser?.name || currentUser?.email?.split('@')[0] || 'User'}</Typography>
+                    </div>
+                    
+                    <Menu
+                        anchorEl={anchorEl}
+                        open={Boolean(anchorEl)}
+                        onClose={handleMenuClose}
+                    >
+                        <MenuItem disabled>
+                            <Typography variant="body1">{currentUser?.name || currentUser?.email?.split('@')[0]}</Typography>
+                        </MenuItem>
+                        <MenuItem disabled>
+                            <Typography variant="caption">{currentUser?.email}</Typography>
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem onClick={handleSaveData} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>save</span>
+                            Save to Firebase
+                        </MenuItem>
+                        <MenuItem onClick={handleExportData} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>file_download</span>
+                            Export Data
+                        </MenuItem>
+                        <MenuItem onClick={handleOpenImportDialog} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>file_upload</span>
+                            Import Data
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem onClick={handleLogout} disabled={isSaving}>
+                            <span className="material-icons" style={{marginRight: 8, fontSize: 16}}>logout</span>
+                            Logout
+                        </MenuItem>
+                    </Menu>
+                    
+                    <Dialog open={importDialogOpen} onClose={handleCloseImportDialog}>
+                        <DialogTitle>Import Data</DialogTitle>
+                        <DialogContent>
+                            <Typography paragraph>
+                                Paste the exported JSON data below:
+                            </Typography>
+                            <TextField
+                                autoFocus
+                                multiline
+                                rows={10}
+                                fullWidth
+                                variant="outlined"
+                                value={importData}
+                                onChange={handleImportDataChange}
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleCloseImportDialog} color="primary">
+                                Cancel
+                            </Button>
+                            <Button 
+                                onClick={handleImportData} 
+                                color="primary"
+                                disabled={!importData || isSaving}
+                            >
+                                {isSaving ? <CircularProgress size={24} /> : 'Import'}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </>
+            );
+        };
+
+        // Notification Component
+        const NotificationSystem = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const dispatch = useDispatch();
+            const notification = useSelector(state => state.persistence.notification);
+            
+            const handleClose = (event, reason) => {
+                if (reason === 'clickaway') {
+                    return;
+                }
+                
+                dispatch(clearNotification());
+            };
+            
+            return (
+                <Snackbar
+                    open={notification.show}
+                    autoHideDuration={6000}
+                    onClose={handleClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                >
+                    <Alert onClose={handleClose} severity={notification.type} variant="filled">
+                        {notification.message}
+                    </Alert>
+                </Snackbar>
+            );
+        };
+
+        // Functions for saving and loading app state from Firebase
+        const saveUserAppState = async () => {
+            const state = store.getState();
+            const { auth, persistence, ...appState } = state;
+            
+            // Save to Firebase
+            const result = await window.FirebaseService.saveAppState(appState);
+            
+            if (result.success) {
+                store.dispatch(updateLastSaved());
+                return true;
+            } else {
+                store.dispatch(setNotification({
+                    show: true,
+                    message: result.message || 'Failed to save data',
+                    type: 'error'
+                }));
+                return false;
+            }
+        };
+        
+        const loadUserAppState = async () => {
+            try {
+                store.dispatch(setLoading(true));
+                
+                const savedState = await window.FirebaseService.loadAppState();
+                
+                if (savedState) {
+                    // Dispatch actions to set the state
+                    if (savedState.focusFactory) {
+                        store.dispatch(setCurrentFactory(savedState.focusFactory.currentFactory));
+                    }
+                    
+                    if (savedState.phase) {
+                        store.dispatch(setCurrentPhase(savedState.phase.currentPhase));
+                    }
+                    
+                    // Set all state data
+                    if (savedState.roles) {
+                        store.dispatch(setRoles(savedState.roles.roles));
+                    }
+                    
+                    if (savedState.personnel) {
+                        store.dispatch(setPersonnel(savedState.personnel.personnel));
+                    }
+                    
+                    if (savedState.orgChart) {
+                        store.dispatch(setOrgCharts(savedState.orgChart.orgCharts));
+                    }
+                    
+                    store.dispatch(setNotification({
+                        show: true,
+                        message: 'Data loaded from Firebase',
+                        type: 'info'
+                    }));
+                }
+                
+                store.dispatch(setLoading(false));
+                return true;
+            } catch (error) {
+                console.error('Error loading app state:', error);
+                store.dispatch(setNotification({
+                    show: true,
+                    message: 'Failed to load data: ' + error.message,
+                    type: 'error'
+                }));
+                store.dispatch(setLoading(false));
+                return false;
+            }
+        };
+
+        // Set up autosave
+        const setupAutosave = () => {
+            // Save state every 2 minutes
+            const autosaveInterval = setInterval(() => {
+                if (window.FirebaseService.isLoggedIn()) {
+                    saveUserAppState();
+                }
+            }, 2 * 60 * 1000);
+            
+            // Clear interval on page unload
+            window.addEventListener('beforeunload', () => {
+                clearInterval(autosaveInterval);
+                if (window.FirebaseService.isLoggedIn()) {
+                    saveUserAppState();
+                }
+            });
+        };
+
+        // Components
+        const AppHeader = () => {
+            const [helpDialogOpen, setHelpDialogOpen] = useState(false);
+            
+            const handleHelpOpen = () => {
+                setHelpDialogOpen(true);
+            };
+            
+            const handleHelpClose = () => {
+                setHelpDialogOpen(false);
+            };
+            
+            return (
+                <div className="header">
+                    <div className="header-left">
+                        <Typography variant="h6">Quality Re-organization Tool</Typography>
+                        <span className="version-badge">v1.0</span>
+                    </div>
+                    <div className="header-right">
+                        <Button color="inherit" onClick={handleHelpOpen}>Help</Button>
+                        <UserMenu />
+                    </div>
+                    
+                    <Dialog open={helpDialogOpen} onClose={handleHelpClose}>
+                        <DialogTitle>Help & Documentation</DialogTitle>
+                        <DialogContent>
+                            <Typography paragraph>
+                                Welcome to the Quality Re-organization Tool. This application allows you to:
+                            </Typography>
+                            <ul>
+                                <li>Define and manage quality roles</li>
+                                <li>Assign personnel to roles</li>
+                                <li>Create and modify organization charts</li>
+                                <li>Compare current and future organizational states</li>
+                            </ul>
+                            <Typography paragraph>
+                                Select a factory using the selector in the control bar, then use the tabs to access
+                                different features of the application.
+                            </Typography>
+                            <Typography paragraph>
+                                Your data is automatically saved to Firebase every 2 minutes.
+                                You can also manually save, export, and import your data using the user menu in the top right.
+                            </Typography>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleHelpClose}>Close</Button>
+                        </DialogActions>
+                    </Dialog>
+                </div>
+            );
+        };
+
+        const FactorySelector = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const factories = useSelector(state => state.focusFactory.factories);
+            const dispatch = useDispatch();
+            
+            const handleChange = (event) => {
+                dispatch(setCurrentFactory(event.target.value));
+            };
+            
+            return (
+                <FormControl variant="outlined" size="small" style={{ minWidth: 120 }}>
+                    <InputLabel>Factory</InputLabel>
+                    <Select value={currentFactory} onChange={handleChange} label="Factory">
+                        {factories.map(factory => (
+                            <MenuItem key={factory} value={factory}>{factory}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            );
+        };
+
+        const PhaseSelector = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentPhase = useSelector(state => state.phase.currentPhase);
+            const phases = useSelector(state => state.phase.phases);
+            const dispatch = useDispatch();
+            
+            const handleChange = (event) => {
+                dispatch(setCurrentPhase(event.target.value));
+            };
+            
+            return (
+                <FormControl variant="outlined" size="small" style={{ minWidth: 120 }}>
+                    <InputLabel>Phase</InputLabel>
+                    <Select value={currentPhase} onChange={handleChange} label="Phase">
+                        {phases.map(phase => (
+                            <MenuItem key={phase} value={phase}>{phase.charAt(0).toUpperCase() + phase.slice(1)}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            );
+        };
+
+        const RoleList = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const roles = useSelector(state => state.roles.roles[currentFactory]);
+            const dispatch = useDispatch();
+            
+            const [dialogOpen, setDialogOpen] = useState(false);
+            const [currentRole, setCurrentRole] = useState({ title: '', level: '', department: '' });
+            const [isEdit, setIsEdit] = useState(false);
+            
+            const handleOpenDialog = (role = null) => {
+                if (role) {
+                    setCurrentRole({ ...role });
+                    setIsEdit(true);
+                } else {
+                    setCurrentRole({ title: '', level: '', department: '' });
+                    setIsEdit(false);
+                }
+                setDialogOpen(true);
+            };
+            
+            const handleCloseDialog = () => {
+                setDialogOpen(false);
+            };
+            
+            const handleSaveRole = () => {
+                if (isEdit) {
+                    dispatch(updateRole({ factory: currentFactory, role: currentRole }));
+                } else {
+                    dispatch(addRole({ factory: currentFactory, role: currentRole }));
+                }
+                setDialogOpen(false);
+            };
+            
+            const handleDeleteRole = (roleId) => {
+                dispatch(deleteRole({ factory: currentFactory, roleId }));
+            };
+            
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setCurrentRole(prev => ({ ...prev, [name]: value }));
+            };
+            
+            return (
+                <div>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6">Roles</Typography>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            color="primary" 
+                            onClick={() => handleOpenDialog()}
+                        >
+                            Add
+                        </Button>
+                    </Box>
+                    
+                    <div>
+                        {roles.map(role => (
+                            <div key={role.id} className="role-item">
+                                <Box display="flex" justifyContent="space-between">
+                                    <div>
+                                        <Typography variant="subtitle1">{role.title}</Typography>
+                                        <Typography variant="caption">{role.level} - {role.department}</Typography>
+                                    </div>
+                                    <div>
+                                        <IconButton size="small" onClick={() => handleOpenDialog(role)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>edit</span>
+                                        </IconButton>
+                                        <IconButton size="small" onClick={() => handleDeleteRole(role.id)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                        </IconButton>
+                                    </div>
+                                </Box>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <Dialog open={dialogOpen} onClose={handleCloseDialog}>
+                        <DialogTitle>{isEdit ? 'Edit Role' : 'Add Role'}</DialogTitle>
+                        <DialogContent>
+                            <TextField
+                                autoFocus
+                                margin="dense"
+                                name="title"
+                                label="Title"
+                                type="text"
+                                fullWidth
+                                value={currentRole.title}
+                                onChange={handleInputChange}
+                            />
+                            <TextField
+                                margin="dense"
+                                name="level"
+                                label="Level"
+                                type="text"
+                                fullWidth
+                                value={currentRole.level}
+                                onChange={handleInputChange}
+                            />
+                            <TextField
+                                margin="dense"
+                                name="department"
+                                label="Department"
+                                type="text"
+                                fullWidth
+                                value={currentRole.department}
+                                onChange={handleInputChange}
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleCloseDialog} color="primary">
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSaveRole} color="primary">
+                                Save
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </div>
+            );
+        };
+
+        const PersonnelList = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const personnel = useSelector(state => state.personnel.personnel[currentFactory]);
+            const roles = useSelector(state => state.roles.roles[currentFactory]);
+            const dispatch = useDispatch();
+            
+            const [dialogOpen, setDialogOpen] = useState(false);
+            const [currentPerson, setCurrentPerson] = useState({ name: '', role: '', skills: [] });
+            const [isEdit, setIsEdit] = useState(false);
+            
+            const handleOpenDialog = (person = null) => {
+                if (person) {
+                    setCurrentPerson({ ...person });
+                    setIsEdit(true);
+                } else {
+                    setCurrentPerson({ name: '', role: '', skills: [] });
+                    setIsEdit(false);
+                }
+                setDialogOpen(true);
+            };
+            
+            const handleCloseDialog = () => {
+                setDialogOpen(false);
+            };
+            
+            const handleSavePerson = () => {
+                if (isEdit) {
+                    dispatch(updatePersonnel({ factory: currentFactory, person: currentPerson }));
+                } else {
+                    dispatch(addPersonnel({ factory: currentFactory, person: currentPerson }));
+                }
+                setDialogOpen(false);
+            };
+            
+            const handleDeletePerson = (personId) => {
+                dispatch(deletePersonnel({ factory: currentFactory, personId }));
+            };
+            
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setCurrentPerson(prev => ({ ...prev, [name]: value }));
+            };
+            
+            const handleSkillsChange = (e) => {
+                const skills = e.target.value.split(',').map(skill => skill.trim());
+                setCurrentPerson(prev => ({ ...prev, skills }));
+            };
+            
+            const getRoleTitleById = (roleId) => {
+                const role = roles.find(r => r.id === roleId);
+                return role ? role.title : 'Unknown Role';
+            };
+            
+            return (
+                <div>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6">Personnel</Typography>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            color="primary" 
+                            onClick={() => handleOpenDialog()}
+                        >
+                            Add
+                        </Button>
+                    </Box>
+                    
+                    <div>
+                        {personnel.map(person => (
+                            <div key={person.id} className="personnel-item">
+                                <Box display="flex" justifyContent="space-between">
+                                    <div>
+                                        <Typography variant="subtitle1">{person.name}</Typography>
+                                        <Typography variant="caption">{getRoleTitleById(person.role)}</Typography>
+                                    </div>
+                                    <div>
+                                        <IconButton size="small" onClick={() => handleOpenDialog(person)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>edit</span>
+                                        </IconButton>
+                                        <IconButton size="small" onClick={() => handleDeletePerson(person.id)}>
+                                            <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                        </IconButton>
+                                    </div>
+                                </Box>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <Dialog open={dialogOpen} onClose={handleCloseDialog}>
+                        <DialogTitle>{isEdit ? 'Edit Personnel' : 'Add Personnel'}</DialogTitle>
+                        <DialogContent>
+                            <TextField
+                                autoFocus
+                                margin="dense"
+                                name="name"
+                                label="Name"
+                                type="text"
+                                fullWidth
+                                value={currentPerson.name}
+                                onChange={handleInputChange}
+                            />
+                            <FormControl fullWidth margin="dense">
+                                <InputLabel>Role</InputLabel>
+                                <Select
+                                    name="role"
+                                    value={currentPerson.role}
+                                    onChange={handleInputChange}
+                                >
+                                    {roles.map(role => (
+                                        <MenuItem key={role.id} value={role.id}>
+                                            {role.title}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                margin="dense"
+                                name="skills"
+                                label="Skills (comma-separated)"
+                                type="text"
+                                fullWidth
+                                value={currentPerson.skills.join(', ')}
+                                onChange={handleSkillsChange}
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleCloseDialog} color="primary">
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSavePerson} color="primary">
+                                Save
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </div>
+            );
+        };
+
+        const OrgChart = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const currentFactory = useSelector(state => state.focusFactory.currentFactory);
+            const currentPhase = useSelector(state => state.phase.currentPhase);
+            const orgChart = useSelector(state => state.orgChart.orgCharts[currentPhase][currentFactory]);
+            const roles = useSelector(state => state.roles.roles[currentFactory]);
+            const dispatch = useDispatch();
+            
+            const [draggingNodeId, setDraggingNodeId] = useState(null);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            
+            const startDrag = (nodeId, e) => {
+                const node = orgChart.nodes.find(n => n.id === nodeId);
+                if (node) {
+                    setDraggingNodeId(nodeId);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDragOffset({
+                        x: e.clientX - rect.left,
+                        y: e.clientY - rect.top
+                    });
+                }
+            };
+            
+            const handleDrag = (e) => {
+                if (draggingNodeId) {
+                    const containerRect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - containerRect.left - dragOffset.x;
+                    const y = e.clientY - containerRect.top - dragOffset.y;
+                    
+                    dispatch(updateNodePosition({
+                        phase: currentPhase,
+                        factory: currentFactory,
+                        nodeId: draggingNodeId,
+                        x,
+                        y
+                    }));
+                }
+            };
+            
+            const stopDrag = () => {
+                setDraggingNodeId(null);
+            };
+            
+            const getRoleTitleById = (roleId) => {
+                const role = roles.find(r => r.id === roleId);
+                return role ? role.title : 'Unknown Role';
+            };
+            
+            const handleAddNode = () => {
+                const newNode = {
+                    roleId: roles[0]?.id || '',
+                    title: roles[0]?.title || 'New Role',
+                    x: 400,
+                    y: 100
+                };
+                
+                dispatch(addNode({
+                    phase: currentPhase,
+                    factory: currentFactory,
+                    node: newNode
+                }));
+            };
+            
+            return (
+                <div>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6">Organization Chart</Typography>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            color="primary" 
+                            onClick={handleAddNode}
+                        >
+                            Add Node
+                        </Button>
+                    </Box>
+                    
+                    <div 
+                        className="center-panel"
+                        onMouseMove={handleDrag}
+                        onMouseUp={stopDrag}
+                        onMouseLeave={stopDrag}
+                    >
+                        {/* Draw connections first so they appear behind nodes */}
+                        <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+                            {orgChart.connections.map(connection => {
+                                const sourceNode = orgChart.nodes.find(n => n.id === connection.sourceId);
+                                const targetNode = orgChart.nodes.find(n => n.id === connection.targetId);
+                                
+                                if (!sourceNode || !targetNode) return null;
+                                
+                                return (
+                                    <line 
+                                        key={connection.id}
+                                        x1={sourceNode.x + 100} 
+                                        y1={sourceNode.y + 25}
+                                        x2={targetNode.x + 100} 
+                                        y2={targetNode.y + 25}
+                                        stroke="#666"
+                                        strokeWidth="2"
+                                    />
+                                );
+                            })}
+                        </svg>
+                        
+                        {/* Draw all nodes */}
+                        {orgChart.nodes.map(node => (
+                            <OrgNode 
+                                key={node.id}
+                                node={node}
+                                index={node.id}
+                                factory={currentFactory}
+                                phase={currentPhase}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const OrgNode = ({ node, index, factory, phase, visualSettings = {}, isHighlighted = false }) => {
+            const dispatch = useDispatch();
+            const roles = useSelector(state => state.roles.roles[factory]);
+            const personnel = useSelector(state => state.personnel.personnel[factory]);
+            
+            // Dragging state
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
+            
+            // Find assigned roles and personnel
+            const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
+            const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
+            
+            // Get the department of the node from the first assigned role (if any)
+            const department = assignedRoles.length > 0 ? assignedRoles[0].department : '';
+            
+            // Determine if this node has a vacancy (no personnel assigned)
+            const hasVacancy = assignedPersonnel.length === 0 && visualSettings.highlightVacancies;
+            
+            // Calculate vacancy details (if node has roles assigned but no personnel)
+            const vacancyDetails = {
+                hasVacancy: assignedRoles.length > 0 && assignedPersonnel.length === 0,
+                roleCount: assignedRoles.length,
+                potentialMatches: getPotentialMatchCount()
+            };
+            
+            function getPotentialMatchCount() {
+                if (!vacancyDetails.hasVacancy) return 0;
+                
+                // Extract all required skills from assigned roles
+                const requiredSkills = new Set();
+                assignedRoles.forEach(role => {
+                    if (role.skills) {
+                        role.skills.forEach(skill => requiredSkills.add(skill));
+                    }
+                });
+                
+                // Count personnel with at least one matching skill
+                if (requiredSkills.size === 0) return personnel.length;
+                
+                // Count unassigned personnel with at least one matching skill
+                return personnel.filter(person => {
+                    if (node.personnel?.includes(person.id)) return false;
+                    if (!person.skills || person.skills.length === 0) return false;
+                    
+                    // Check if any skills match
+                    return person.skills.some(skill => requiredSkills.has(skill));
+                }).length;
+            }
+            
+            const handleDelete = (e) => {
+                e.stopPropagation();
+                dispatch(deleteNode({
+                    phase,
+                    factory,
+                    nodeId: node.id
+                }));
+            };
+            
+            // Dragging handlers
+            const handleMouseDown = (e) => {
+                e.stopPropagation();
+                
+                // Only start drag on the node itself, not on buttons
+                if (e.target.closest('button')) {
+                    return;
+                }
+                
+                setIsDragging(true);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setDragOffset({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                });
+                
+                // Add event listeners to document for move and up events
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            };
+            
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                
+                // Find the container element
+                const container = document.getElementById('org-chart-container');
+                if (!container) return;
+                
+                const containerRect = container.getBoundingClientRect();
+                
+                // Calculate new position
+                let newX = e.clientX - containerRect.left - dragOffset.x;
+                let newY = e.clientY - containerRect.top - dragOffset.y;
+                
+                // Account for current zoom level and pan position
+                const zoomLevel = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[3]) || 1;
+                const panX = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[4]) || 0;
+                const panY = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[5]) || 0;
+                
+                newX = (newX - panX) / zoomLevel;
+                newY = (newY - panY) / zoomLevel;
+                
+                // Ensure we don't go too far off-screen
+                newX = Math.max(newX, -200);
+                newY = Math.max(newY, -100);
+                
+                // Update node position in Redux
+                dispatch(updateNodePosition({
+                    phase,
+                    factory,
+                    nodeId: node.id,
+                    x: newX,
+                    y: newY
+                }));
+            };
+            
+            const handleMouseUp = () => {
+                if (!isDragging) return;
+                
+                setIsDragging(false);
+                
+                // Remove event listeners
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+            
+            // Get colors based on settings
+            const getNodeBorderColor = () => {
+                if (visualSettings.customColors && visualSettings.borderColor) {
+                    return visualSettings.borderColor;
+                }
+                
+                // Use the factory color if no custom color is specified
+                switch (factory) {
+                    case 'ADD':
+                        return '#CC2030';
+                    case 'BBV':
+                        return '#00518A';
+                    case 'SYN':
+                        return '#232323';
+                    default:
+                        return '#666666';
+                }
+            };
+            
+            // Get text color
+            const getTextColor = () => {
+                if (visualSettings.customColors) {
+                    return visualSettings.textColor;
+                }
+                return '#000000';
+            };
+            
+            // Get background color
+            const getBackgroundColor = () => {
+                if (hasVacancy) {
+                    return '#fff8e1'; // Light yellow for vacancies
+                }
+                
+                if (visualSettings.customColors) {
+                    return visualSettings.nodeColor;
+                }
+                
+                return '#ffffff';
+            };
+            
+            // Get node dimensions from settings
+            const nodeWidth = visualSettings.nodeWidth || 200;
+            const nodeHeight = visualSettings.nodeHeight || 120;
+            const nodeBorderWidth = visualSettings.nodeBorderWidth || 2;
+            
+            return (
+                <>
+                    <Paper
+                        className={`org-node ${factory}`}
+                        elevation={isDragging ? 8 : isHighlighted ? 6 : 2}
+                        sx={{
+                            position: 'absolute',
+                            top: node.y,
+                            left: node.x,
+                            width: nodeWidth,
+                            height: nodeHeight,
+                            transition: isDragging ? 'none' : 'all 0.2s',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            backgroundColor: getBackgroundColor(),
+                            color: getTextColor(),
+                            border: `${nodeBorderWidth}px solid ${getNodeBorderColor()}`,
+                            boxShadow: isHighlighted ? '0 0 0 2px #ff9800, 0 4px 8px rgba(0,0,0,0.2)' : undefined,
+                            cursor: isDragging ? 'grabbing' : 'grab',
+                            zIndex: isDragging ? 1000 : 1
+                        }}
+                        onMouseDown={handleMouseDown}
+                    >
+                        <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'flex-start',
+                            p: 1,
+                            pb: 0
+                        }}>
+                            <Typography variant="h6" sx={{ 
+                                fontSize: '1rem', 
+                                fontWeight: 'bold',
+                                maxWidth: 'calc(100% - 60px)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                {node.title}
+                            </Typography>
+                            <Box>
+                                <IconButton size="small">
+                                    <span className="material-icons" style={{fontSize: '16px'}}>edit</span>
+                                </IconButton>
+                                <IconButton size="small" onClick={handleDelete}>
+                                    <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                </IconButton>
+                            </Box>
+                        </Box>
+                        
+                        {visualSettings.showDepartments && department && (
+                            <Box sx={{ px: 1, display: 'flex', alignItems: 'center' }}>
+                                <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>business</span>
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                    {department}
+                                </Typography>
+                            </Box>
+                        )}
+                        
+                        <Divider sx={{ my: 0.5 }} />
+                        
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 1 }}>
+                            {visualSettings.showPersonnel && (
+                                <Box sx={{ mb: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>person_outline</span>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                                                Personnel
+                                            </Typography>
+                                        </Box>
+                                        
+                                        {/* Add the matching button if there are vacancies and roles assigned */}
+                                        {vacancyDetails.hasVacancy && vacancyDetails.potentialMatches > 0 && (
+                                            <Tooltip title="Find matching personnel">
+                                                <IconButton 
+                                                    size="small" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setMatchingSuggestionsOpen(true);
+                                                    }}
+                                                    sx={{ p: 0.5 }}
+                                                >
+                                                    <Badge 
+                                                        badgeContent={vacancyDetails.potentialMatches} 
+                                                        color="primary"
+                                                        overlap="circular"
+                                                        sx={{ '& .MuiBadge-badge': { fontSize: '9px', height: '16px', minWidth: '16px' } }}
+                                                    >
+                                                        <span className="material-icons" style={{fontSize: '16px'}}>person_search</span>
+                                                    </Badge>
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                    </Box>
+                                    
+                                    <Box
+                                        sx={{ 
+                                            minHeight: 24, 
+                                            backgroundColor: 'rgba(0,0,0,0.03)',
+                                            borderRadius: 1,
+                                            p: 0.5,
+                                            maxHeight: '40%',
+                                            overflow: 'auto'
+                                        }}
+                                    >
+                                        {assignedPersonnel.length > 0 ? (
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {assignedPersonnel.map(person => (
+                                                    <Tooltip key={person.id} title={person.currentRole || ''}>
+                                                        <Chip 
+                                                            label={person.name} 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                height: 20, 
+                                                                fontSize: '0.675rem', 
+                                                                '& .MuiChip-label': { p: '0 6px' } 
+                                                            }} 
+                                                        />
+                                                    </Tooltip>
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {vacancyDetails.hasVacancy ? (
+                                                    <Box 
+                                                        sx={{ 
+                                                            display: 'flex', 
+                                                            flexDirection: 'column', 
+                                                            alignItems: 'center',
+                                                            width: '100%' 
+                                                        }}
+                                                    >
+                                                        <Typography 
+                                                            variant="caption" 
+                                                            color="error" 
+                                                            sx={{ display: 'block', fontWeight: 'bold' }}
+                                                        >
+                                                            Vacancy
+                                                        </Typography>
+                                                        
+                                                        {vacancyDetails.potentialMatches > 0 && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="text"
+                                                                startIcon={<span className="material-icons" style={{fontSize: '14px'}}>person_add</span>}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setMatchingSuggestionsOpen(true);
+                                                                }}
+                                                                sx={{ 
+                                                                    fontSize: '0.7rem', 
+                                                                    p: 0, 
+                                                                    minWidth: 0, 
+                                                                    textTransform: 'none',
+                                                                    mt: 0.5
+                                                                }}
+                                                            >
+                                                                Find matches
+                                                            </Button>
+                                                        )}
+                                                    </Box>
+                                                ) : (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
+                                                        Drag personnel here
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
+                            
+                            {visualSettings.showRoles && (
+                                <Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>work_outline</span>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                                            Roles
+                                        </Typography>
+                                    </Box>
+                                    
+                                    <Box
+                                        sx={{ 
+                                            minHeight: 24,
+                                            backgroundColor: 'rgba(0,0,0,0.03)',
+                                            borderRadius: 1,
+                                            p: 0.5,
+                                            maxHeight: '40%',
+                                            overflow: 'auto'
+                                        }}
+                                    >
+                                        {assignedRoles.length > 0 ? (
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {assignedRoles.map(role => (
+                                                    <Tooltip key={role.id} title={role.department || ''}>
+                                                        <Chip 
+                                                            label={role.title} 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                height: 20, 
+                                                                fontSize: '0.675rem', 
+                                                                '& .MuiChip-label': { p: '0 6px' } 
+                                                            }} 
+                                                        />
+                                                    </Tooltip>
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
+                                                Drag roles here
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+                    </Paper>
+                    
+                    {/* Personnel matching suggestions dialog */}
+                    <Dialog
+                        open={matchingSuggestionsOpen}
+                        onClose={() => setMatchingSuggestionsOpen(false)}
+                        maxWidth="sm"
+                        fullWidth
+                    >
+                        <DialogTitle>Personnel Matching Suggestions</DialogTitle>
+                        <DialogContent>
+                            <Typography variant="body2" paragraph>
+                                The following personnel match the required skills for this position:
+                            </Typography>
+                            <Box sx={{ mt: 2 }}>
+                                {personnel
+                                    .filter(person => !node.personnel?.includes(person.id))
+                                    .map(person => (
+                                        <Box
+                                            key={person.id}
+                                            sx={{
+                                                p: 1,
+                                                mb: 1,
+                                                border: '1px solid #e0e0e0',
+                                                borderRadius: 1,
+                                                '&:hover': {
+                                                    backgroundColor: '#f5f5f5'
+                                                }
+                                            }}
+                                        >
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <Typography variant="subtitle1">{person.name}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {person.skills?.join(', ')}
+                                                    </Typography>
+                                                </div>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => {
+                                                        dispatch(updateNodePosition({
+                                                            phase,
+                                                            factory,
+                                                            nodeId: node.id,
+                                                            x: person.x,
+                                                            y: person.y
+                                                        }));
+                                                        setMatchingSuggestionsOpen(false);
+                                                    }}
+                                                >
+                                                    Assign
+                                                </Button>
+                                            </Box>
+                                        </Box>
+                                    ))}
+                            </Box>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setMatchingSuggestionsOpen(false)}>
+                                Close
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </>
+            );
+        };
+
+        // Main Application
+        const MainApp = () => {
+            const { useSelector, useDispatch } = ReactRedux;
+            const { isAuthenticated, loading } = useSelector(state => state.auth);
+            const dispatch = useDispatch();
+            
+            useEffect(() => {
+                // Set up auth state change listener
+                const checkFirebaseReady = () => {
+                    if (window.FirebaseService) {
+                        // Check if user is already logged in
+                        const user = window.FirebaseService.getCurrentUser();
+                        if (user) {
+                            dispatch(loginSuccess(user));
+                            // Load user data
+                            loadUserAppState();
+                        } else {
+                            dispatch(setLoading(false));
+                        }
+                        
+                        // Set up autosave
+                        setupAutosave();
+                    } else {
+                        // Firebase not ready yet, check again in a moment
+                        setTimeout(checkFirebaseReady, 100);
+                    }
+                };
+                
+                // Start checking if Firebase is ready
+                checkFirebaseReady();
+                
+                // Listen for firebase-ready event
+                const handleFirebaseReady = () => {
+                    checkFirebaseReady();
+                };
+                document.addEventListener('firebase-ready', handleFirebaseReady);
+                
+                return () => {
+                    document.removeEventListener('firebase-ready', handleFirebaseReady);
+                };
+            }, []);
+            
+            if (loading) {
+                return <LoadingScreen />;
+            }
+            
+            if (!isAuthenticated) {
+                return <Login />;
+            }
+            
+            return (
+                <>
+                    <App />
+                    <NotificationSystem />
+                </>
+            );
+        };
+
+        // FactorySelector, PhaseSelector, and other components are unchanged from before
+
+        const App = () => {
+            const [currentTab, setCurrentTab] = useState(0);
+            
+            const handleTabChange = (event, newValue) => {
+                setCurrentTab(newValue);
+            };
+            
+            return (
+                <Box className="app-container">
+                    <AppHeader />
+                    
+                    <Box sx={{ display: 'flex', padding: 2, gap: 2 }}>
+                        <FactorySelector />
+                        <PhaseSelector />
+                        <Box sx={{ ml: 'auto' }}>
+                            <UserMenu />
+                        </Box>
+                    </Box>
+                    
+                    <Paper sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                        <Tabs value={currentTab} onChange={handleTabChange} centered>
+                            <Tab label="Organization Chart" />
+                            <Tab label="Phase Comparison" />
+                            <Tab label="Reports & Analytics" />
+                            <Tab label="Dashboard" />
+                        </Tabs>
+                    </Paper>
+
+                    {currentTab === 0 && (
+                        <FlexibleLayout
+                            leftPanel={<RoleList />}
+                            centerPanel={<OrgChart />}
+                            rightPanel={<PersonnelList />}
+                        />
+                    )}
+                    
+                    {currentTab === 1 && (
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6">Phase Comparison Tool</Typography>
+                            <Typography>Coming soon: Compare organization states between phases</Typography>
+                        </Box>
+                    )}
+                    
+                    {currentTab === 2 && (
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6">Reports & Analytics</Typography>
+                            <Typography>Coming soon: Detailed reports and analytics</Typography>
+                        </Box>
+                    )}
+                    
+                    {currentTab === 3 && (
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6">Dashboard</Typography>
+                            <Typography>Coming soon: Organization overview dashboard</Typography>
+                        </Box>
+                    )}
+                </Box>
+            );
+        };
+
+        // FlexibleLayout component
+        const FlexibleLayout = ({ leftPanel, centerPanel, rightPanel }) => {
+            return (
+                <Box 
+                    sx={{ 
+                        display: 'flex', 
+                        height: 'calc(100vh - 200px)',
+                        width: '100%',
+                        gap: 2,
+                        overflow: 'hidden',
+                        px: 2
+                    }}
+                >
+                    <Paper 
+                        sx={{ 
+                            width: '20%', 
+                            overflow: 'auto',
+                            padding: 2,
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }} 
+                        elevation={1}
+                    >
+                        {leftPanel}
+                    </Paper>
+                    
+                    <Paper 
+                        sx={{ 
+                            flex: 1, 
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }} 
+                        elevation={1}
+                    >
+                        {centerPanel}
+                    </Paper>
+                    
+                    <Paper 
+                        sx={{ 
+                            width: '20%', 
+                            overflow: 'auto',
+                            padding: 2,
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }} 
+                        elevation={1}
+                    >
+                        {rightPanel}
+                    </Paper>
+                </Box>
+            );
+        };
+
+        // Render the application
+        ReactDOM.createRoot(document.getElementById('root')).render(
+            <Provider store={store}>
+                <MainApp />
+            </Provider>
+        );
+    </script>
+</body>
+</html> 
