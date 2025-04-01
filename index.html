@@ -182,21 +182,24 @@
 
     <!-- Library Imports -->
     <!-- React and ReactDOM -->
-    <script src="https://esm.sh/react@18"></script>
-    <script src="https://esm.sh/react-dom@18"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Redux and Redux Toolkit -->
-    <script src="https://esm.sh/redux@4.2.1"></script>
-    <script src="https://esm.sh/react-redux@8.1.2"></script>
-    <script src="https://esm.sh/@reduxjs/toolkit@2.2.1"></script>
+    <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@reduxjs/toolkit@2.2.1/dist/redux-toolkit.umd.min.js" crossorigin></script>
+    
+    <!-- Material UI Dependencies -->
+    <script src="https://unpkg.com/@babel/runtime@7.23.9/umd/babel-runtime.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js" crossorigin></script>
     
     <!-- Material UI -->
-    <script src="https://esm.sh/@mui/material@5.15.3"></script>
-    <script src="https://esm.sh/@emotion/react@11.11.1"></script>
-    <script src="https://esm.sh/@emotion/styled@11.11.0"></script>
+    <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.production.min.js" crossorigin></script>
 
     <!-- Material Icons -->
     <!-- Use a simple script that sets a global variable for Material Icons -->
@@ -231,25 +234,10 @@
     </script>
 
     <!-- Application Script -->
-    <script type="module">
-        // Import Redux Toolkit
-        import { createSlice, configureStore, combineReducers } from '@reduxjs/toolkit';
-        import React from 'react';
-        import ReactDOM from 'react-dom';
-        import { Provider } from 'react-redux';
-        import * as MaterialUI from '@mui/material';
-
-        // Make these available globally
-        window.React = React;
-        window.ReactDOM = ReactDOM;
-        window.MaterialUI = MaterialUI;
-        window.ReduxToolkit = { createSlice, configureStore, combineReducers };
-    </script>
-
-    <!-- Application Script -->
     <script type="text/babel">
-        // Destructure React components
+        // Destructure React components and Redux
         const { useState, useEffect } = React;
+        const { useSelector, useDispatch, Provider } = ReactRedux;
         const { 
             Button, AppBar, Toolbar, Typography, IconButton, Box, Tabs, Tab, 
             Paper, Select, MenuItem, FormControl, InputLabel, 
@@ -258,7 +246,7 @@
         } = MaterialUI;
         
         // Redux Store Setup
-        const { createSlice, configureStore, combineReducers } = window.ReduxToolkit;
+        const { createSlice, configureStore, combineReducers } = RTK;
 
         // Create a unique ID generator
         const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -1642,7 +1630,6 @@
         };
 
         // Render the application
-        const { Provider } = ReactRedux;
         ReactDOM.createRoot(document.getElementById('root')).render(
             <Provider store={store}>
                 <MainApp />
