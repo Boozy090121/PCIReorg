@@ -58,7 +58,7 @@ const OrgNode = ({
   const hasPersonnel = Array.isArray(assignedPersonnel) && assignedPersonnel.length > 0;
   const hasVacancy = hasRoles && !hasPersonnel;
   
-  // Use our personnel matching hook - no longer passing hasVacancy
+  // Use our personnel matching hook - IMPORTANT: Remove hasVacancy parameter
   const {
     matchingSuggestionsOpen,
     openMatchingSuggestions,
@@ -67,11 +67,10 @@ const OrgNode = ({
     getPotentialMatchCount
   } = usePersonnelMatching(node, factory, phase);
   
-  // Calculate potential matches - Fix: don't rely on the hook to access hasVacancy
-  // Instead we use the local hasVacancy variable we've already computed
-  const potentialMatches = hasVacancy && assignedRoles && Array.isArray(assignedRoles) 
-    ? getPotentialMatchCount(assignedRoles) 
-    : 0;
+  // Calculate potential matches - properly passing assignedRoles to the function
+  // Only calculate if there's a vacancy
+  const potentialMatches = hasVacancy && assignedRoles ? 
+    getPotentialMatchCount(assignedRoles) : 0;
   
   // Get the department of the node from the first assigned role (if any)
   const department = assignedRoles.length > 0 && assignedRoles[0]?.department || '';
