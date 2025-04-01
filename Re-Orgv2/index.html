@@ -241,23 +241,47 @@
 
     <!-- Library Imports -->
     <!-- React and ReactDOM -->
+    <!-- Development versions -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Production versions
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    -->
     
-    <!-- Babel for JSX -->
+    <!-- Babel -->
+    <!-- Development version -->
+    <script src="https://unpkg.com/@babel/standalone/babel.js"></script>
+    <!-- Production version
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    -->
     
     <!-- Redux and React-Redux -->
+    <!-- Development versions -->
+    <script src="https://unpkg.com/redux@4.2.1/dist/redux.js"></script>
+    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.js"></script>
+    <!-- Production versions
     <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js"></script>
     <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.min.js"></script>
+    -->
     
     <!-- Material UI -->
+    <!-- Development versions -->
+    <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.development.js"></script>
+    <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.development.js"></script>
+    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.development.js"></script>
+    <!-- Production versions
     <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.production.min.js"></script>
     <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
     <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+    -->
 
     <!-- React Beautiful DnD -->
-    <script src="https://cdn.jsdelivr.net/npm/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js" integrity="sha256-qQDRxqGqTMNh5hGv9K+E8Qv1e5e/tZb0PBBBvR0BQCU=" crossorigin="anonymous"></script>
+    <!-- Development version -->
+    <script src="https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.js"></script>
+    <!-- Production version
+    <script src="https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js"></script>
+    -->
 
     <!-- Fallback for react-beautiful-dnd -->
     <script>
@@ -265,7 +289,9 @@
         if (!window.ReactBeautifulDnd) {
             console.log('Loading fallback for react-beautiful-dnd...');
             const fallbackScript = document.createElement('script');
-            fallbackScript.src = 'https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.js';
+            // Use development version for better error messages
+            fallbackScript.src = 'https://cdn.jsdelivr.net/npm/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.js';
+            // For production use: fallbackScript.src = 'https://cdn.jsdelivr.net/npm/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js';
             document.head.appendChild(fallbackScript);
         }
     </script>
