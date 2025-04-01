@@ -7,6 +7,9 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 
+// Use the global ReactBeautifulDnD from CDN
+const { DragDropContext } = window.ReactBeautifulDnD;
+
 // This is a simplified persistence manager
 // In a real application, you would connect this to a backend API
 

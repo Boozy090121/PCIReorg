@@ -1,16 +1,31 @@
 // src/components/CenterPanel/CenterPanel.js
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Paper, Button, IconButton, Tooltip, Badge } from '@mui/material';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import FitScreenIcon from '@mui/icons-material/FitScreen';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import AddIcon from '@mui/icons-material/Add';
-import TuneIcon from '@mui/icons-material/Tune';
-import SearchIcon from '@mui/icons-material/Search';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
+import { 
+  Box, Paper, Button, IconButton, Tooltip, Badge, 
+  Typography, Divider, Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField, FormControl, InputLabel, Select, MenuItem, Chip
+} from '@mui/material';
+import {
+  ZoomIn as ZoomInIcon,
+  ZoomOut as ZoomOutIcon,
+  FitScreen as FitScreenIcon,
+  Fullscreen as FullscreenIcon,
+  Add as AddIcon,
+  Tune as TuneIcon,
+  Search as SearchIcon,
+  FilterList as FilterListIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Business as BusinessIcon,
+  PersonOutline as PersonOutlineIcon,
+  WorkOutline as WorkOutlineIcon,
+  PersonSearch as PersonSearchIcon,
+  PersonAdd as PersonAddIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
+// Use the global ReactBeautifulDnD from CDN
+const { DragDropContext, Droppable } = window.ReactBeautifulDnD;
 import { selectOrgChart } from '../../features/orgChartSlice';
 import { selectCurrentFactory } from '../../features/focusFactorySlice';
 import { selectCurrentPhase } from '../../features/phaseSlice';
@@ -20,7 +35,16 @@ import OrgNodeCreator from './OrgNodeCreator';
 import VisualizationOptions from './VisualizationOptions';
 import SearchAndFilter from './SearchAndFilter';
 
-const CenterPanel = () => {
+// Selectors
+export const selectRolesByFactory = (state, factory) => {
+  return state.roles.roles[factory] || [];
+};
+
+export const selectPersonnelByFactory = (state, factory) => {
+  return state.personnel.personnel[factory] || [];
+};
+
+export const CenterPanel = () => {
   const dispatch = useDispatch();
   const currentFactory = useSelector(selectCurrentFactory);
   const currentPhase = useSelector(selectCurrentPhase);
@@ -311,19 +335,7 @@ const CenterPanel = () => {
   );
 };
 
-export default CenterPanel;
-
-// src/components/CenterPanel/OrgChartContent.js
-import React, { useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { Box } from '@mui/material';
-import OrgNode from './OrgNode';
-import { selectCurrentFactory } from '../../features/focusFactorySlice';
-import { selectCurrentPhase } from '../../features/phaseSlice';
-import { selectRolesByFactory } from '../../features/roleSlice';
-import { selectPersonnelByFactory } from '../../features/personnelSlice';
-
-const OrgChartContent = ({ 
+export const OrgChartContent = ({ 
   nodes, 
   connections, 
   zoom, 
@@ -335,6 +347,38 @@ const OrgChartContent = ({
   const roles = useSelector(state => selectRolesByFactory(state, currentFactory));
   const personnel = useSelector(state => selectPersonnelByFactory(state, currentFactory));
   
+  // Render connections between nodes
+  const renderConnections = () => {
+    if (!connections || !Array.isArray(connections)) return null;
+    
+    return connections.map(connection => {
+      const sourceNode = nodes?.find(n => n.id === connection.sourceId);
+      const targetNode = nodes?.find(n => n.id === connection.targetId);
+      
+      if (!sourceNode || !targetNode) return null;
+      
+      // Calculate connection points
+      const startX = sourceNode.x + (visualSettings.nodeWidth || 200) / 2;
+      const startY = sourceNode.y + (visualSettings.nodeHeight || 120) / 2;
+      const endX = targetNode.x + (visualSettings.nodeWidth || 200) / 2;
+      const endY = targetNode.y + (visualSettings.nodeHeight || 120) / 2;
+      
+      return (
+        <g key={connection.id}>
+          <line
+            x1={startX}
+            y1={startY}
+            x2={endX}
+            y2={endY}
+            stroke="#666"
+            strokeWidth="2"
+            markerEnd="url(#arrowhead)"
+          />
+        </g>
+      );
+    });
+  };
+
   // Filter nodes based on search term
   const filteredNodes = nodes.filter(node => {
     if (!searchTerm) return true;
@@ -452,37 +496,7 @@ const OrgChartContent = ({
   );
 };
 
-export default OrgChartContent;
-
-// src/components/CenterPanel/OrgNode.js
-import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { 
-  Paper, 
-  Typography, 
-  Box, 
-  Chip, 
-  Divider, 
-  IconButton, 
-  Tooltip, 
-  Badge,
-  Button
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
-import BusinessIcon from '@mui/icons-material/Business';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import PersonSearchIcon from '@mui/icons-material/PersonSearch';
-import { Draggable, Droppable } from 'react-beautiful-dnd';
-import { selectRolesByFactory } from '../../features/roleSlice';
-import { selectPersonnelByFactory } from '../../features/personnelSlice';
-import { deleteNode } from '../../features/orgChartSlice';
-import PersonnelMatchingSuggestions from './PersonnelMatchingSuggestions';
-import { usePersonnelMatching } from './usePersonnelMatching';
-
-const OrgNode = ({ 
+export const OrgNode = ({ 
   node, 
   index, 
   factory, 
@@ -494,14 +508,51 @@ const OrgNode = ({
   const roles = useSelector(state => selectRolesByFactory(state, factory));
   const personnel = useSelector(state => selectPersonnelByFactory(state, factory));
   
-  // Use our personnel matching hook
-  const {
-    matchingSuggestionsOpen,
-    openMatchingSuggestions,
-    closeMatchingSuggestions,
-    handleAssignPersonnel
-  } = usePersonnelMatching(node, factory, phase);
-  
+  // Add before the OrgNode component
+  const usePersonnelMatching = (node, factory, phase) => {
+    const dispatch = useDispatch();
+    const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
+    const personnel = useSelector(state => selectPersonnelByFactory(state, currentFactory));
+    const roles = useSelector(state => selectRolesByFactory(state, currentFactory));
+
+    const openMatchingSuggestions = () => {
+      setMatchingSuggestionsOpen(true);
+    };
+
+    const closeMatchingSuggestions = () => {
+      setMatchingSuggestionsOpen(false);
+    };
+
+    const handleAssignPersonnel = (personId) => {
+      // Get the current node's personnel
+      const currentPersonnel = node.personnel || [];
+      
+      // Add the new person if they're not already assigned
+      if (!currentPersonnel.includes(personId)) {
+        const updatedPersonnel = [...currentPersonnel, personId];
+        
+        // Update the node with the new personnel
+        dispatch(updateNode({
+          phase,
+          factory,
+          node: {
+            ...node,
+            personnel: updatedPersonnel
+          }
+        }));
+      }
+      
+      closeMatchingSuggestions();
+    };
+
+    return {
+      matchingSuggestionsOpen,
+      openMatchingSuggestions,
+      closeMatchingSuggestions,
+      handleAssignPersonnel
+    };
+  };
+
   // Find assigned roles and personnel
   const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
   const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
@@ -509,40 +560,44 @@ const OrgNode = ({
   // Get the department of the node from the first assigned role (if any)
   const department = assignedRoles.length > 0 ? assignedRoles[0].department : '';
   
-  // Determine if this node has a vacancy (no personnel assigned)
-  const hasVacancy = assignedPersonnel.length === 0 && visualSettings.highlightVacancies;
+  // First determine if this node has a vacancy (roles assigned but no personnel)
+  const hasRoles = Array.isArray(assignedRoles) && assignedRoles.length > 0;
+  const hasPersonnel = Array.isArray(assignedPersonnel) && assignedPersonnel.length > 0;
+  const hasVacancy = hasRoles && !hasPersonnel && visualSettings.highlightVacancies;
   
-  // Calculate vacancy details (if node has roles assigned but no personnel)
-  const vacancyDetails = {
-    hasVacancy: assignedRoles.length > 0 && assignedPersonnel.length === 0,
-    roleCount: assignedRoles.length,
-    // Get potential matches based on matching skills
-    potentialMatches: getPotentialMatchCount()
-  };
-  
-  function getPotentialMatchCount() {
-    if (!vacancyDetails.hasVacancy) return 0;
+  // Calculate potential matches if there's a vacancy
+  const potentialMatches = (() => {
+    if (!hasVacancy) return 0;
     
-    // Extract all required skills from assigned roles
+    // Extract all required skills from assigned roles with additional safety checks
     const requiredSkills = new Set();
     assignedRoles.forEach(role => {
-      if (role.skills) {
-        role.skills.forEach(skill => requiredSkills.add(skill));
+      if (role && Array.isArray(role.skills)) {
+        role.skills.forEach(skill => {
+          if (skill) requiredSkills.add(skill);
+        });
       }
     });
     
-    // Count personnel with at least one matching skill
-    if (requiredSkills.size === 0) return personnel.length; // If no skills required, all personnel match
+    // If no skills required, all unassigned personnel are potential matches
+    if (requiredSkills.size === 0) {
+      return personnel.filter(person => 
+        person && 
+        person.id && 
+        !assignedPersonnel.includes(person.id)
+      ).length;
+    }
     
     // Count unassigned personnel with at least one matching skill
     return personnel.filter(person => {
-      if (node.personnel?.includes(person.id)) return false; // Skip if already assigned
-      if (!person.skills || person.skills.length === 0) return false; // Skip if no skills
+      if (!person || !person.id) return false;
+      if (assignedPersonnel.includes(person.id)) return false; // Skip if already assigned
+      if (!Array.isArray(person.skills) || person.skills.length === 0) return false; // Skip if no skills
       
       // Check if any skills match
-      return person.skills.some(skill => requiredSkills.has(skill));
+      return person.skills.some(skill => skill && requiredSkills.has(skill));
     }).length;
-  }
+  })();
   
   const handleDelete = () => {
     dispatch(deleteNode({
@@ -672,8 +727,8 @@ const OrgNode = ({
                       </Typography>
                     </Box>
                     
-                    {/* Add the matching button if there are vacancies and roles assigned */}
-                    {vacancyDetails.hasVacancy && vacancyDetails.potentialMatches > 0 && (
+                    {/* Add the matching button if there are vacancies and potential matches */}
+                    {hasVacancy && potentialMatches > 0 && (
                       <Tooltip title="Find matching personnel">
                         <IconButton 
                           size="small" 
@@ -681,7 +736,7 @@ const OrgNode = ({
                           sx={{ p: 0.5 }}
                         >
                           <Badge 
-                            badgeContent={vacancyDetails.potentialMatches} 
+                            badgeContent={potentialMatches} 
                             color="primary"
                             overlap="circular"
                             sx={{ '& .MuiBadge-badge': { fontSize: '9px', height: '16px', minWidth: '16px' } }}
@@ -725,7 +780,7 @@ const OrgNode = ({
                           </Box>
                         ) : (
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {vacancyDetails.hasVacancy ? (
+                            {hasVacancy ? (
                               <Box 
                                 sx={{ 
                                   display: 'flex', 
@@ -742,7 +797,7 @@ const OrgNode = ({
                                   Vacancy
                                 </Typography>
                                 
-                                {vacancyDetails.potentialMatches > 0 && (
+                                {potentialMatches > 0 && (
                                   <Button
                                     size="small"
                                     variant="text"
@@ -842,27 +897,7 @@ const OrgNode = ({
   );
 };
 
-export default OrgNode;
-
-// src/components/CenterPanel/OrgNodeCreator.js
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  IconButton,
-  Box
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import { addNode } from '../../features/orgChartSlice';
-import { selectCurrentFactory } from '../../features/focusFactorySlice';
-import { selectCurrentPhase } from '../../features/phaseSlice';
-
-const OrgNodeCreator = ({ open, onClose }) => {
+export const OrgNodeCreator = ({ open, onClose }) => {
   const dispatch = useDispatch();
   const currentFactory = useSelector(selectCurrentFactory);
   const currentPhase = useSelector(selectCurrentPhase);
@@ -968,5 +1003,3 @@ const OrgNodeCreator = ({ open, onClose }) => {
     </Dialog>
   );
 };
-
-export default OrgNodeCreator;
