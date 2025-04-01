@@ -18,7 +18,7 @@ import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
-import { Draggable, Droppable } from 'react-beautiful-dnd';
+import { Draggable } from 'react-beautiful-dnd';
 import { selectRolesByFactory } from '../../features/roleSlice';
 import { selectPersonnelByFactory } from '../../features/personnelSlice';
 import { deleteNode } from '../../features/orgChartSlice';
@@ -56,11 +56,14 @@ const OrgNode = ({
   // Determine if this node has a vacancy (roles assigned but no personnel)
   const hasVacancy = assignedRoles.length > 0 && assignedPersonnel.length === 0;
   
+  // Calculate potential matches if there's a vacancy
+  const potentialMatches = hasVacancy ? getPotentialMatchCount(assignedRoles) : 0;
+  
   // Calculate vacancy details
   const vacancyDetails = {
     hasVacancy,
     roleCount: assignedRoles.length,
-    potentialMatches: hasVacancy ? getPotentialMatchCount(assignedRoles) : 0
+    potentialMatches
   };
   
   const handleDelete = () => {
@@ -100,7 +103,7 @@ const OrgNode = ({
   
   // Get background color
   const getBackgroundColor = () => {
-    if (hasVacancy) {
+    if (hasVacancy && visualSettings.highlightVacancies) {
       return '#fff8e1'; // Light yellow for vacancies
     }
     

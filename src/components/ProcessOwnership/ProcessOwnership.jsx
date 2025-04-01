@@ -35,20 +35,17 @@ const ProcessOwnership = () => {
   const currentFactory = useSelector(state => state.focusFactory.currentFactory);
   const [currentTab, setCurrentTab] = useState(0);
   const [processes, setProcesses] = useState([]);
-  const [filteredProcesses, setFilteredProcesses] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentProcess, setCurrentProcess] = useState(null);
 
-  useEffect(() => {
-    // Filter processes based on search term
-    const filtered = processes.filter(process => 
-      process.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      process.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      process.owner.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProcesses(filtered);
-  }, [processes, searchTerm]);
+  // Compute filtered processes directly from processes and searchTerm
+  const filteredProcesses = processes.filter(process => 
+    searchTerm === '' || 
+    process.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    process.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    process.owner.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -73,195 +70,113 @@ const ProcessOwnership = () => {
     setDialogOpen(true);
   };
 
-  const handleDialogClose = () => {
+  const handleSaveProcess = (process) => {
+    if (process.id) {
+      // Update existing process
+      setProcesses(prevProcesses => 
+        prevProcesses.map(p => p.id === process.id ? process : p)
+      );
+    } else {
+      // Add new process
+      const newProcess = {
+        ...process,
+        id: Date.now().toString()
+      };
+      setProcesses(prevProcesses => [...prevProcesses, newProcess]);
+    }
     setDialogOpen(false);
     setCurrentProcess(null);
   };
 
-  const handleProcessSave = () => {
-    if (currentProcess.id) {
-      setProcesses(prevProcesses => 
-        prevProcesses.map(p => p.id === currentProcess.id ? currentProcess : p)
-      );
-    } else {
-      setProcesses(prevProcesses => [
-        ...prevProcesses,
-        {
-          ...currentProcess,
-          id: `proc_${Date.now()}`
-        }
-      ]);
-    }
-    handleDialogClose();
+  const handleDeleteProcess = (processId) => {
+    setProcesses(prevProcesses => 
+      prevProcesses.filter(p => p.id !== processId)
+    );
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={currentTab} onChange={handleTabChange}>
-          <Tab label="All Processes" />
-          <Tab label="By Department" />
-          <Tab label="By Owner" />
-          <Tab label="Process Flow" />
-        </Tabs>
-      </Box>
-
-      {/* Search and Add Process Bar */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <TextField
-          size="small"
-          placeholder="Search processes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ flex: 1 }}
-          InputProps={{
-            startAdornment: <span className="material-icons">search</span>
-          }}
-        />
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h5" component="h2">
+          Process Ownership
+        </Typography>
         <Button
           variant="contained"
-          startIcon={<span className="material-icons">add</span>}
           onClick={handleAddProcess}
         >
           Add Process
         </Button>
       </Box>
 
-      {/* All Processes Tab */}
-      {currentTab === 0 && (
-        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Process Name</TableCell>
-                  <TableCell>Department</TableCell>
-                  <TableCell>Owner</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+      <Box sx={{ mb: 3 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Search processes..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ mb: 2 }}
+        />
+      </Box>
+
+      <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+        <Tab label="List View" />
+        <Tab label="Flow View" />
+      </Tabs>
+
+      {currentTab === 0 ? (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Process Name</TableCell>
+                <TableCell>Department</TableCell>
+                <TableCell>Owner</TableCell>
+                <TableCell>Dependencies</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredProcesses.map((process) => (
+                <TableRow key={process.id}>
+                  <TableCell>{process.name}</TableCell>
+                  <TableCell>{process.department}</TableCell>
+                  <TableCell>{process.owner}</TableCell>
+                  <TableCell>
+                    {process.dependencies?.map(depId => {
+                      const dep = processes.find(p => p.id === depId);
+                      return dep ? (
+                        <Chip
+                          key={depId}
+                          label={dep.name}
+                          size="small"
+                          sx={{ mr: 1, mb: 1 }}
+                        />
+                      ) : null;
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" onClick={() => handleEditProcess(process)}>
+                      <span className="material-icons">edit</span>
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleDeleteProcess(process.id)}>
+                      <span className="material-icons">delete</span>
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredProcesses.map((process) => (
-                  <TableRow key={process.id}>
-                    <TableCell>{process.name}</TableCell>
-                    <TableCell>{process.department}</TableCell>
-                    <TableCell>{process.owner}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={process.status || 'Active'} 
-                        color="primary" 
-                        size="small" 
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" onClick={() => handleEditProcess(process)}>
-                        <span className="material-icons">edit</span>
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
-
-      {/* By Department Tab */}
-      {currentTab === 1 && (
-        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
-          <Grid container spacing={2}>
-            {Object.entries(
-              filteredProcesses.reduce((acc, process) => {
-                if (!acc[process.department]) {
-                  acc[process.department] = [];
-                }
-                acc[process.department].push(process);
-                return acc;
-              }, {})
-            ).map(([department, processes]) => (
-              <Grid item xs={12} md={6} key={department}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {department}
-                    </Typography>
-                    <List dense>
-                      {processes.map(process => (
-                        <ListItem key={process.id}>
-                          <ListItemText 
-                            primary={process.name}
-                            secondary={`Owner: ${process.owner}`}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
-
-      {/* By Owner Tab */}
-      {currentTab === 2 && (
-        <Box sx={{ p: 2, flex: 1, overflow: 'auto' }}>
-          <Grid container spacing={2}>
-            {Object.entries(
-              filteredProcesses.reduce((acc, process) => {
-                if (!acc[process.owner]) {
-                  acc[process.owner] = [];
-                }
-                acc[process.owner].push(process);
-                return acc;
-              }, {})
-            ).map(([owner, processes]) => (
-              <Grid item xs={12} md={6} key={owner}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {owner}
-                    </Typography>
-                    <List dense>
-                      {processes.map(process => (
-                        <ListItem key={process.id}>
-                          <ListItemText 
-                            primary={process.name}
-                            secondary={`Department: ${process.department}`}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
-
-      {/* Process Flow Tab */}
-      {currentTab === 3 && (
-        <Box sx={{ p: 0, flex: 1, overflow: 'hidden' }}>
-          <ProcessFlow 
-            processes={filteredProcesses} 
-            onUpdateProcess={(updatedProcess) => {
-              setProcesses(prevProcesses => 
-                prevProcesses.map(p => p.id === updatedProcess.id ? updatedProcess : p)
-              );
-            }} 
-          />
-        </Box>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <ProcessFlow
+          processes={filteredProcesses}
+          onUpdateProcess={handleSaveProcess}
+        />
       )}
 
       {/* Process Dialog */}
-      <Dialog 
-        open={dialogOpen} 
-        onClose={handleDialogClose}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           {currentProcess?.id ? 'Edit Process' : 'Add Process'}
         </DialogTitle>
@@ -317,12 +232,8 @@ const ProcessOwnership = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDialogClose}>Cancel</Button>
-          <Button 
-            onClick={handleProcessSave} 
-            variant="contained" 
-            disabled={!currentProcess?.name}
-          >
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => handleSaveProcess(currentProcess)} variant="contained">
             Save
           </Button>
         </DialogActions>
