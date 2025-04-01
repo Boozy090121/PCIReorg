@@ -1,5 +1,44 @@
 // Firebase Service for Quality Re-organization Tool
 
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID
+};
+
+// Initialize Firebase
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+
+let app;
+let db;
+let auth;
+
+export const initializeFirebase = () => {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    console.log('Firebase initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Error initializing Firebase:', error);
+    return false;
+  }
+};
+
+export const getFirebaseApp = () => app;
+export const getFirebaseDB = () => db;
+export const getFirebaseAuth = () => auth;
+
+// Export the config for initialization
+export { firebaseConfig };
+
 // Firebase module will be defined after Firebase scripts are loaded
 let FirebaseService = null;
 
@@ -8,9 +47,6 @@ function initializeFirebaseService() {
     // Create a module to handle Firebase operations
     FirebaseService = (function() {
         // References to Firebase services
-        let auth;
-        let firestore;
-        let app;
         let currentUser = null;
         let isInitialized = false;
 
@@ -44,7 +80,7 @@ function initializeFirebaseService() {
                 }
 
                 try {
-                    firestore = firebase.firestore();
+                    db = firebase.firestore();
                     console.log('Firebase Firestore service initialized');
                 } catch (error) {
                     console.error('Firebase Firestore initialization error:', error);
@@ -64,11 +100,11 @@ function initializeFirebaseService() {
                         };
                         
                         // Check if the user document exists
-                        firestore.collection('users').doc(user.uid).get()
+                        db.collection('users').doc(user.uid).get()
                             .then(doc => {
                                 if (!doc.exists) {
                                     // Create the user document if it doesn't exist
-                                    return firestore.collection('users').doc(user.uid).set({
+                                    return db.collection('users').doc(user.uid).set({
                                         name: currentUser.name,
                                         email: currentUser.email,
                                         role: currentUser.role,
@@ -134,7 +170,7 @@ function initializeFirebaseService() {
                 try {
                     // Get user role from Firestore
                     console.log('Fetching user data from Firestore...');
-                    const userDoc = await firestore.collection('users').doc(user.uid).get();
+                    const userDoc = await db.collection('users').doc(user.uid).get();
                     if (userDoc.exists) {
                         const userData = userDoc.data();
                         currentUser.name = userData.name || currentUser.name;
@@ -143,7 +179,7 @@ function initializeFirebaseService() {
                     } else {
                         console.log('Creating new user document in Firestore...');
                         // Create user document if it doesn't exist
-                        await firestore.collection('users').doc(user.uid).set({
+                        await db.collection('users').doc(user.uid).set({
                             name: currentUser.name,
                             email: currentUser.email,
                             role: currentUser.role,
@@ -179,7 +215,7 @@ function initializeFirebaseService() {
                 });
                 
                 // Create user document in Firestore
-                await firestore.collection('users').doc(user.uid).set({
+                await db.collection('users').doc(user.uid).set({
                     name: userData.name,
                     email: userData.email,
                     role: 'user',
@@ -224,7 +260,7 @@ function initializeFirebaseService() {
             
             try {
                 console.log('Saving app state to Firestore...');
-                await firestore.collection('appData').doc(currentUser.id).set({
+                await db.collection('appData').doc(currentUser.id).set({
                     data: state,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
@@ -248,7 +284,7 @@ function initializeFirebaseService() {
             
             try {
                 console.log('Loading app state from Firestore...');
-                const doc = await firestore.collection('appData').doc(currentUser.id).get();
+                const doc = await db.collection('appData').doc(currentUser.id).get();
                 
                 if (doc.exists) {
                     console.log('App state loaded successfully');
@@ -272,7 +308,7 @@ function initializeFirebaseService() {
             
             try {
                 console.log('Exporting user data...');
-                const doc = await firestore.collection('appData').doc(currentUser.id).get();
+                const doc = await db.collection('appData').doc(currentUser.id).get();
                 
                 if (doc.exists) {
                     console.log('User data exported successfully');
@@ -304,7 +340,7 @@ function initializeFirebaseService() {
                 console.log('Importing user data...');
                 const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
                 
-                await firestore.collection('appData').doc(currentUser.id).set({
+                await db.collection('appData').doc(currentUser.id).set({
                     data: data.data,
                     importedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     originalUserId: data.userId,

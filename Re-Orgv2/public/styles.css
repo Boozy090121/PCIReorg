@@ -1,0 +1,38 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #fafafa;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Add some basic transitions */
+.MuiButton-root {
+  transition: transform 0.2s ease-in-out;
+}
+
+.MuiButton-root:hover {
+  transform: translateY(-2px);
+}
+
+/* Loading state styles */
+.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Error state styles */
+.error {
+  color: #d32f2f;
+  padding: 16px;
+  border-radius: 4px;
+  background-color: #ffebee;
+  margin: 16px 0;
+} 

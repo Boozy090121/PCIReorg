@@ -26,14 +26,14 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Custom styles -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="%PUBLIC_URL%/styles.css">
 </head>
 <body>
     <div id="root"></div>
     
     <!-- Initialize Firebase -->
     <script type="module">
-        import { initializeFirebase, firebaseConfig } from './firebase-service.js';
+        import { initializeFirebase, firebaseConfig } from '../src/firebase-service.js';
         
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('DOM Content Loaded - Starting Firebase initialization');
@@ -42,6 +42,6 @@
     </script>
     
     <!-- Application Code -->
-    <script type="text/babel" src="app.js"></script>
+    <script type="text/babel" src="%PUBLIC_URL%/app.js"></script>
 </body>
 </html> 

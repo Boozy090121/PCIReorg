@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { 
   Box, Paper, Button, IconButton, Tooltip, Badge, 
   Typography, Divider, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, FormControl, InputLabel, Select, MenuItem, Chip
+  TextField, FormControl, InputLabel, Select, MenuItem, Chip, Avatar
 } from '@mui/material';
 import {
   ZoomIn as ZoomInIcon,
@@ -34,6 +34,7 @@ import OrgChartContent from './OrgChartContent';
 import OrgNodeCreator from './OrgNodeCreator';
 import VisualizationOptions from './VisualizationOptions';
 import SearchAndFilter from './SearchAndFilter';
+import './drag-drop-styles.css';
 
 // Selectors
 export const selectRolesByFactory = (state, factory) => {
@@ -342,77 +343,107 @@ export const OrgChartContent = ({
   visualSettings = {}, 
   searchTerm = '' 
 }) => {
+  const dispatch = useDispatch();
+  const [isDragOver, setIsDragOver] = useState(false);
   const currentFactory = useSelector(selectCurrentFactory);
   const currentPhase = useSelector(selectCurrentPhase);
-  const roles = useSelector(state => selectRolesByFactory(state, currentFactory));
-  const personnel = useSelector(state => selectPersonnelByFactory(state, currentFactory));
-  
+
+  // Handle drag over on the canvas
+  const handleCanvasDragOver = (event) => {
+    event.preventDefault();
+    
+    try {
+      // Get data from the dragged element
+      const dragData = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+      
+      // Only accept 'move' operation for nodes 
+      if (dragData.type === 'NODE') {
+        event.dataTransfer.dropEffect = 'move';
+        if (!isDragOver) {
+          setIsDragOver(true);
+        }
+      }
+    } catch (error) {
+      // Handle error
+      console.error('Error handling canvas drag over:', error);
+    }
+  };
+
+  const handleCanvasDragEnter = (event) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleCanvasDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleCanvasDrop = (event) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    
+    try {
+      // Get data from the dropped element
+      const droppedData = JSON.parse(event.dataTransfer.getData('application/json') || '{}');
+      
+      // Only handle 'NODE' type drops for repositioning
+      if (droppedData.type === 'NODE') {
+        // Calculate new position based on drop coordinates and zoom level
+        const canvasRect = event.currentTarget.getBoundingClientRect();
+        const newX = (event.clientX - canvasRect.left) / zoom;
+        const newY = (event.clientY - canvasRect.top) / zoom;
+        
+        // Find the node by ID
+        const nodeToUpdate = nodes.find(n => n.id === droppedData.id);
+        
+        if (nodeToUpdate) {
+          // Dispatch action to update node position
+          dispatch(updateNode({
+            phase: currentPhase,
+            factory: currentFactory,
+            node: {
+              ...nodeToUpdate,
+              x: newX,
+              y: newY
+            }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error handling canvas drop:', error);
+    }
+  };
+
   // Render connections between nodes
   const renderConnections = () => {
-    if (!connections || !Array.isArray(connections)) return null;
-    
-    return connections.map(connection => {
-      const sourceNode = nodes?.find(n => n.id === connection.sourceId);
-      const targetNode = nodes?.find(n => n.id === connection.targetId);
+    return connections.map((connection, index) => {
+      const fromNode = nodes.find(n => n.id === connection.from);
+      const toNode = nodes.find(n => n.id === connection.to);
       
-      if (!sourceNode || !targetNode) return null;
+      if (!fromNode || !toNode) return null;
       
       // Calculate connection points
-      const startX = sourceNode.x + (visualSettings.nodeWidth || 200) / 2;
-      const startY = sourceNode.y + (visualSettings.nodeHeight || 120) / 2;
-      const endX = targetNode.x + (visualSettings.nodeWidth || 200) / 2;
-      const endY = targetNode.y + (visualSettings.nodeHeight || 120) / 2;
+      const fromX = fromNode.x + (visualSettings.nodeWidth || 220) / 2;
+      const fromY = fromNode.y + (visualSettings.nodeHeight || 120);
+      const toX = toNode.x + (visualSettings.nodeWidth || 220) / 2;
+      const toY = toNode.y;
       
+      // Draw straight line for now
       return (
-        <g key={connection.id}>
-          <line
-            x1={startX}
-            y1={startY}
-            x2={endX}
-            y2={endY}
-            stroke="#666"
-            strokeWidth="2"
-            markerEnd="url(#arrowhead)"
-          />
-        </g>
+        <line
+          key={index}
+          x1={fromX}
+          y1={fromY}
+          x2={toX}
+          y2={toY}
+          stroke="#999"
+          strokeWidth="2"
+          markerEnd="url(#arrowhead)"
+        />
       );
     });
   };
 
-  // Filter nodes based on search term
-  const filteredNodes = nodes.filter(node => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    
-    // Check node title
-    if (node.title.toLowerCase().includes(searchLower)) return true;
-    
-    // Check assigned roles
-    if (node.roles && node.roles.length > 0) {
-      const nodeRoles = roles.filter(role => node.roles.includes(role.id));
-      if (nodeRoles.some(role => 
-        role.title.toLowerCase().includes(searchLower) ||
-        (role.department && role.department.toLowerCase().includes(searchLower))
-      )) {
-        return true;
-      }
-    }
-    
-    // Check assigned personnel
-    if (node.personnel && node.personnel.length > 0) {
-      const nodePersonnel = personnel.filter(person => node.personnel.includes(person.id));
-      if (nodePersonnel.some(person => 
-        person.name.toLowerCase().includes(searchLower) ||
-        (person.currentRole && person.currentRole.toLowerCase().includes(searchLower))
-      )) {
-        return true;
-      }
-    }
-    
-    return false;
-  });
-  
   return (
     <Box
       sx={{
@@ -420,9 +451,16 @@ export const OrgChartContent = ({
         width: '2000px',
         height: '1500px',
         padding: '60px',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        transform: `scale(${zoom})`,
+        transformOrigin: '0 0',
+        backgroundColor: isDragOver ? 'rgba(0, 0, 0, 0.03)' : 'transparent'
       }}
       className="org-chart-canvas"
+      onDragOver={handleCanvasDragOver}
+      onDragEnter={handleCanvasDragEnter}
+      onDragLeave={handleCanvasDragLeave}
+      onDrop={handleCanvasDrop}
     >
       {/* SVG for connections */}
       <svg
@@ -445,51 +483,39 @@ export const OrgChartContent = ({
             refY="3.5"
             orient="auto"
           >
-            <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+            <polygon points="0 0, 10 3.5, 0 7" fill="#999" />
           </marker>
         </defs>
         {renderConnections()}
       </svg>
       
       {/* Render Nodes */}
-      {nodes.map((node, index) => {
-        // Skip nodes that don't match the search if a search term is provided
-        if (searchTerm && !filteredNodes.some(n => n.id === node.id)) {
-          return null;
-        }
-        
-        return (
-          <OrgNode
-            key={node.id}
-            node={node}
-            index={index}
-            factory={currentFactory}
-            phase={currentPhase}
-            visualSettings={visualSettings}
-            isHighlighted={searchTerm && filteredNodes.some(n => n.id === node.id)}
-          />
-        );
-      })}
+      {nodes.map((node, index) => (
+        <OrgNode
+          key={node.id}
+          node={node}
+          index={index}
+          factory={currentFactory}
+          phase={currentPhase}
+          visualSettings={visualSettings}
+          isHighlighted={searchTerm && node.title.toLowerCase().includes(searchTerm.toLowerCase())}
+        />
+      ))}
       
-      {/* Show "No results" message if search term is provided but no nodes match */}
-      {searchTerm && filteredNodes.length === 0 && (
-        <Box 
-          sx={{ 
-            position: 'absolute', 
-            top: '50%', 
-            left: '50%', 
+      {/* Show "No results" message when search yields no matches */}
+      {searchTerm && !nodes.some(node => node.title.toLowerCase().includes(searchTerm.toLowerCase())) && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
             transform: 'translate(-50%, -50%)',
-            backgroundColor: 'white',
-            padding: 3,
-            borderRadius: 1,
-            boxShadow: 3,
-            width: 300,
             textAlign: 'center',
-            zIndex: 3,
+            color: 'text.secondary'
           }}
         >
-          <h3>No Results Found</h3>
-          <p>No positions, roles, or personnel match your search term: "{searchTerm}"</p>
+          <Typography variant="h6">No matching nodes found</Typography>
+          <Typography variant="body2">Try a different search term</Typography>
         </Box>
       )}
     </Box>
@@ -505,55 +531,109 @@ export const OrgNode = ({
   isHighlighted = false
 }) => {
   const dispatch = useDispatch();
-  const roles = useSelector(state => selectRolesByFactory(state, factory));
-  const personnel = useSelector(state => selectPersonnelByFactory(state, factory));
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
+  const [matchingPersonnel, setMatchingPersonnel] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  // Add before the OrgNode component
-  const usePersonnelMatching = (node, factory, phase) => {
-    const dispatch = useDispatch();
-    const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
-    const personnel = useSelector(state => selectPersonnelByFactory(state, currentFactory));
-    const roles = useSelector(state => selectRolesByFactory(state, currentFactory));
+  const {
+    nodeBorderWidth = 2,
+    nodeWidth = 220,
+    nodeHeight = 120,
+    showRoles = true,
+    showPersonnel = true,
+    customColors = false,
+    nodeColor,
+    textColor,
+    borderColor
+  } = visualSettings;
 
-    const openMatchingSuggestions = () => {
-      setMatchingSuggestionsOpen(true);
-    };
+  // Handle drag over
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    if (!isDragOver) {
+      setIsDragOver(true);
+    }
+  };
 
-    const closeMatchingSuggestions = () => {
-      setMatchingSuggestionsOpen(false);
-    };
+  // Handle drag enter
+  const handleDragEnter = (event) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
 
-    const handleAssignPersonnel = (personId) => {
-      // Get the current node's personnel
-      const currentPersonnel = node.personnel || [];
+  // Handle drag leave
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  // Handle drop
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setIsDragOver(false);
+
+    try {
+      const droppedData = JSON.parse(event.dataTransfer.getData('application/json'));
       
-      // Add the new person if they're not already assigned
-      if (!currentPersonnel.includes(personId)) {
-        const updatedPersonnel = [...currentPersonnel, personId];
-        
-        // Update the node with the new personnel
-        dispatch(updateNode({
-          phase,
-          factory,
-          node: {
-            ...node,
-            personnel: updatedPersonnel
-          }
-        }));
+      if (!droppedData || !droppedData.type || !droppedData.id) {
+        console.warn('Invalid dropped data format', droppedData);
+        return;
       }
-      
-      closeMatchingSuggestions();
-    };
 
-    return {
-      matchingSuggestionsOpen,
-      openMatchingSuggestions,
-      closeMatchingSuggestions,
-      handleAssignPersonnel
-    };
+      // Handle different dropped item types
+      switch (droppedData.type) {
+        case 'ROLE':
+          handleRoleDrop(droppedData);
+          break;
+        case 'PERSONNEL':
+          handlePersonnelDrop(droppedData);
+          break;
+        default:
+          console.warn('Unknown drop type:', droppedData.type);
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+  };
+
+  // Handle role drop
+  const handleRoleDrop = (roleData) => {
+    const currentRoles = Array.isArray(node.roles) ? [...node.roles] : [];
+    
+    // Only add the role if not already assigned
+    if (!currentRoles.includes(roleData.id)) {
+      dispatch(updateNode({
+        phase,
+        factory,
+        node: {
+          ...node,
+          roles: [...currentRoles, roleData.id]
+        }
+      }));
+    }
+  };
+
+  // Handle personnel drop
+  const handlePersonnelDrop = (personnelData) => {
+    const currentPersonnel = Array.isArray(node.personnel) ? [...node.personnel] : [];
+    
+    // Only add the personnel if not already assigned
+    if (!currentPersonnel.includes(personnelData.id)) {
+      dispatch(updateNode({
+        phase,
+        factory,
+        node: {
+          ...node,
+          personnel: [...currentPersonnel, personnelData.id]
+        }
+      }));
+    }
   };
 
   // Find assigned roles and personnel
+  const roles = useSelector(state => selectRolesByFactory(state, factory));
+  const personnel = useSelector(state => selectPersonnelByFactory(state, factory));
   const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
   const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
   
@@ -609,8 +689,8 @@ export const OrgNode = ({
   
   // Get colors based on settings
   const getNodeBorderColor = () => {
-    if (visualSettings.customColors && visualSettings.borderColor) {
-      return visualSettings.borderColor;
+    if (customColors && borderColor) {
+      return borderColor;
     }
     
     // Use the factory color if no custom color is specified
@@ -628,8 +708,8 @@ export const OrgNode = ({
   
   // Get text color
   const getTextColor = () => {
-    if (visualSettings.customColors) {
-      return visualSettings.textColor;
+    if (customColors) {
+      return textColor;
     }
     return '#000000';
   };
@@ -640,260 +720,252 @@ export const OrgNode = ({
       return '#fff8e1'; // Light yellow for vacancies
     }
     
-    if (visualSettings.customColors) {
-      return visualSettings.nodeColor;
+    if (customColors) {
+      return nodeColor;
     }
     
     return '#ffffff';
   };
   
-  // Get node dimensions from settings
-  const nodeWidth = visualSettings.nodeWidth || 200;
-  const nodeHeight = visualSettings.nodeHeight || 120;
-  const nodeBorderWidth = visualSettings.nodeBorderWidth || 2;
-  
   return (
-    <>
-      <Draggable draggableId={node.id} index={index}>
-        {(provided, snapshot) => (
-          <Paper
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className={`org-node ${factory}`}
-            elevation={snapshot.isDragging ? 8 : isHighlighted ? 6 : 2}
-            sx={{
-              position: 'absolute',
-              top: node.y,
-              left: node.x,
-              width: nodeWidth,
-              height: nodeHeight,
-              transition: snapshot.isDragging ? 'none' : 'all 0.2s',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              backgroundColor: getBackgroundColor(),
-              color: getTextColor(),
-              border: `${nodeBorderWidth}px solid ${getNodeBorderColor()}`,
-              boxShadow: isHighlighted ? '0 0 0 2px #ff9800, 0 4px 8px rgba(0,0,0,0.2)' : undefined,
-            }}
-          >
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'flex-start',
-              p: 1,
-              pb: 0
-            }}>
-              <Typography variant="h6" sx={{ 
-                fontSize: '1rem', 
-                fontWeight: 'bold',
-                maxWidth: 'calc(100% - 60px)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {node.title}
-              </Typography>
-              <Box>
-                <IconButton size="small">
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={handleDelete}>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-            
-            {visualSettings.showDepartments && department && (
-              <Box sx={{ px: 1, display: 'flex', alignItems: 'center' }}>
-                <BusinessIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.875rem' }} />
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {department}
+    <Paper
+      elevation={3}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      sx={{
+        position: 'absolute',
+        left: node.x,
+        top: node.y,
+        width: nodeWidth,
+        height: nodeHeight,
+        backgroundColor: isDragOver ? 'rgba(25, 118, 210, 0.1)' : getBackgroundColor(),
+        border: isDragOver 
+          ? `${nodeBorderWidth}px dashed #1976d2`  
+          : `${nodeBorderWidth}px solid ${getNodeBorderColor()}`,
+        color: getTextColor(),
+        borderRadius: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        transition: 'all 0.2s ease',
+        cursor: 'grab',
+        '&:hover': {
+          boxShadow: 6,
+          transform: 'scale(1.02)'
+        },
+        ...(isHighlighted && {
+          boxShadow: 6,
+          transform: 'scale(1.02)',
+          border: `${nodeBorderWidth}px solid #2196f3`
+        })
+      }}
+      className={`org-node ${isDragOver ? 'drag-over' : ''}`}
+    >
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start',
+        p: 1,
+        pb: 0
+      }}>
+        <Typography variant="h6" sx={{ 
+          fontSize: '1rem', 
+          fontWeight: 'bold',
+          maxWidth: 'calc(100% - 60px)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {node.title}
+        </Typography>
+        <Box>
+          <IconButton size="small">
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={handleDelete}>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
+      
+      {showDepartments && department && (
+        <Box sx={{ px: 1, display: 'flex', alignItems: 'center' }}>
+          <BusinessIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.875rem' }} />
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {department}
+          </Typography>
+        </Box>
+      )}
+      
+      <Divider sx={{ my: 0.5 }} />
+      
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 1 }}>
+        {showPersonnel && (
+          <Box sx={{ mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <PersonOutlineIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6 }} />
+                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                  Personnel
                 </Typography>
               </Box>
-            )}
-            
-            <Divider sx={{ my: 0.5 }} />
-            
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 1 }}>
-              {visualSettings.showPersonnel && (
-                <Box sx={{ mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PersonOutlineIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6 }} />
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
-                        Personnel
-                      </Typography>
-                    </Box>
-                    
-                    {/* Add the matching button if there are vacancies and potential matches */}
-                    {hasVacancy && potentialMatches > 0 && (
-                      <Tooltip title="Find matching personnel">
-                        <IconButton 
-                          size="small" 
-                          onClick={openMatchingSuggestions}
-                          sx={{ p: 0.5 }}
-                        >
-                          <Badge 
-                            badgeContent={potentialMatches} 
-                            color="primary"
-                            overlap="circular"
-                            sx={{ '& .MuiBadge-badge': { fontSize: '9px', height: '16px', minWidth: '16px' } }}
-                          >
-                            <PersonSearchIcon fontSize="small" />
-                          </Badge>
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Box>
-                  
-                  <Droppable droppableId={`personnel-${node.id}`} type="PERSONNEL">
-                    {(dropProvided) => (
-                      <Box
-                        ref={dropProvided.innerRef}
-                        {...dropProvided.droppableProps}
-                        sx={{ 
-                          minHeight: 24, 
-                          backgroundColor: 'rgba(0,0,0,0.03)',
-                          borderRadius: 1,
-                          p: 0.5,
-                          maxHeight: '40%',
-                          overflow: 'auto'
-                        }}
-                      >
-                        {assignedPersonnel.length > 0 ? (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {assignedPersonnel.map(person => (
-                              <Tooltip key={person.id} title={person.currentRole || ''}>
-                                <Chip 
-                                  label={person.name} 
-                                  size="small" 
-                                  sx={{ 
-                                    height: 20, 
-                                    fontSize: '0.675rem', 
-                                    '& .MuiChip-label': { p: '0 6px' } 
-                                  }} 
-                                />
-                              </Tooltip>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {hasVacancy ? (
-                              <Box 
-                                sx={{ 
-                                  display: 'flex', 
-                                  flexDirection: 'column', 
-                                  alignItems: 'center',
-                                  width: '100%' 
-                                }}
-                              >
-                                <Typography 
-                                  variant="caption" 
-                                  color="error" 
-                                  sx={{ display: 'block', fontWeight: 'bold' }}
-                                >
-                                  Vacancy
-                                </Typography>
-                                
-                                {potentialMatches > 0 && (
-                                  <Button
-                                    size="small"
-                                    variant="text"
-                                    startIcon={<PersonAddIcon fontSize="small" />}
-                                    onClick={openMatchingSuggestions}
-                                    sx={{ 
-                                      fontSize: '0.7rem', 
-                                      p: 0, 
-                                      minWidth: 0, 
-                                      textTransform: 'none',
-                                      mt: 0.5
-                                    }}
-                                  >
-                                    Find matches
-                                  </Button>
-                                )}
-                              </Box>
-                            ) : (
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
-                                Drag personnel here
-                              </Typography>
-                            )}
-                          </Box>
-                        )}
-                        {dropProvided.placeholder}
-                      </Box>
-                    )}
-                  </Droppable>
-                </Box>
-              )}
               
-              {visualSettings.showRoles && (
-                <Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                    <WorkOutlineIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6 }} />
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
-                      Roles
-                    </Typography>
-                  </Box>
-                  
-                  <Droppable droppableId={`roles-${node.id}`} type="ROLE">
-                    {(dropProvided) => (
-                      <Box
-                        ref={dropProvided.innerRef}
-                        {...dropProvided.droppableProps}
-                        sx={{ 
-                          minHeight: 24,
-                          backgroundColor: 'rgba(0,0,0,0.03)',
-                          borderRadius: 1,
-                          p: 0.5,
-                          maxHeight: '40%',
-                          overflow: 'auto'
-                        }}
-                      >
-                        {assignedRoles.length > 0 ? (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {assignedRoles.map(role => (
-                              <Tooltip key={role.id} title={role.department || ''}>
-                                <Chip 
-                                  label={role.title} 
-                                  size="small" 
-                                  sx={{ 
-                                    height: 20, 
-                                    fontSize: '0.675rem', 
-                                    '& .MuiChip-label': { p: '0 6px' } 
-                                  }} 
-                                />
-                              </Tooltip>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
-                            Drag roles here
-                          </Typography>
-                        )}
-                        {dropProvided.placeholder}
-                      </Box>
-                    )}
-                  </Droppable>
-                </Box>
+              {/* Add the matching button if there are vacancies and potential matches */}
+              {hasVacancy && potentialMatches > 0 && (
+                <Tooltip title="Find matching personnel">
+                  <IconButton 
+                    size="small" 
+                    onClick={openMatchingSuggestions}
+                    sx={{ p: 0.5 }}
+                  >
+                    <Badge 
+                      badgeContent={potentialMatches} 
+                      color="primary"
+                      overlap="circular"
+                      sx={{ '& .MuiBadge-badge': { fontSize: '9px', height: '16px', minWidth: '16px' } }}
+                    >
+                      <PersonSearchIcon fontSize="small" />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
               )}
             </Box>
-          </Paper>
+            
+            <Droppable droppableId={`personnel-${node.id}`} type="PERSONNEL">
+              {(dropProvided) => (
+                <Box
+                  ref={dropProvided.innerRef}
+                  {...dropProvided.droppableProps}
+                  sx={{ 
+                    minHeight: 24, 
+                    backgroundColor: 'rgba(0,0,0,0.03)',
+                    borderRadius: 1,
+                    p: 0.5,
+                    maxHeight: '40%',
+                    overflow: 'auto'
+                  }}
+                >
+                  {assignedPersonnel.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {assignedPersonnel.map(person => (
+                        <Tooltip key={person.id} title={person.currentRole || ''}>
+                          <Chip 
+                            label={person.name} 
+                            size="small" 
+                            sx={{ 
+                              height: 20, 
+                              fontSize: '0.675rem', 
+                              '& .MuiChip-label': { p: '0 6px' } 
+                            }} 
+                          />
+                        </Tooltip>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {hasVacancy ? (
+                        <Box 
+                          sx={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center',
+                            width: '100%' 
+                          }}
+                        >
+                          <Typography 
+                            variant="caption" 
+                            color="error" 
+                            sx={{ display: 'block', fontWeight: 'bold' }}
+                          >
+                            Vacancy
+                          </Typography>
+                          
+                          {potentialMatches > 0 && (
+                            <Button
+                              size="small"
+                              variant="text"
+                              startIcon={<PersonAddIcon fontSize="small" />}
+                              onClick={openMatchingSuggestions}
+                              sx={{ 
+                                fontSize: '0.7rem', 
+                                p: 0, 
+                                minWidth: 0, 
+                                textTransform: 'none',
+                                mt: 0.5
+                              }}
+                            >
+                              Find matches
+                            </Button>
+                          )}
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
+                          Drag personnel here
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+                  {dropProvided.placeholder}
+                </Box>
+              )}
+            </Droppable>
+          </Box>
         )}
-      </Draggable>
-      
-      {/* Personnel matching suggestions dialog */}
-      {matchingSuggestionsOpen && (
-        <PersonnelMatchingSuggestions 
-          open={matchingSuggestionsOpen}
-          onClose={closeMatchingSuggestions}
-          node={node}
-          onAssignPersonnel={handleAssignPersonnel}
-        />
-      )}
-    </>
+        
+        {showRoles && (
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+              <WorkOutlineIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6 }} />
+              <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                Roles
+              </Typography>
+            </Box>
+            
+            <Droppable droppableId={`roles-${node.id}`} type="ROLE">
+              {(dropProvided) => (
+                <Box
+                  ref={dropProvided.innerRef}
+                  {...dropProvided.droppableProps}
+                  sx={{ 
+                    minHeight: 24,
+                    backgroundColor: 'rgba(0,0,0,0.03)',
+                    borderRadius: 1,
+                    p: 0.5,
+                    maxHeight: '40%',
+                    overflow: 'auto'
+                  }}
+                >
+                  {assignedRoles.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {assignedRoles.map(role => (
+                        <Tooltip key={role.id} title={role.department || ''}>
+                          <Chip 
+                            label={role.title} 
+                            size="small" 
+                            sx={{ 
+                              height: 20, 
+                              fontSize: '0.675rem', 
+                              '& .MuiChip-label': { p: '0 6px' } 
+                            }} 
+                          />
+                        </Tooltip>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
+                      Drag roles here
+                    </Typography>
+                  )}
+                  {dropProvided.placeholder}
+                </Box>
+              )}
+            </Droppable>
+          </Box>
+        )}
+      </Box>
+    </Paper>
   );
 };
 
