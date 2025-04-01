@@ -68,7 +68,7 @@ const OrgNode = ({
   } = usePersonnelMatching(node, factory, phase, hasVacancy);
   
   // Calculate potential matches if there's a vacancy
-  const potentialMatches = hasVacancy && Array.isArray(assignedRoles) ? getPotentialMatchCount(assignedRoles, hasVacancy) : 0;
+  const potentialMatches = hasVacancy && Array.isArray(assignedRoles) ? getPotentialMatchCount(assignedRoles) : 0;
   
   // Get the department of the node from the first assigned role (if any)
   const department = assignedRoles.length > 0 && assignedRoles[0]?.department || '';

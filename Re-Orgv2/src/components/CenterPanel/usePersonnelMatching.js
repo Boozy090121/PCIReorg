@@ -23,10 +23,10 @@ export const usePersonnelMatching = (node, factory, phase, hasVacancy) => {
   const personnel = useSelector(state => selectPersonnelByFactory(state, factory)) || [];
   const roles = useSelector(state => selectRolesByFactory(state, factory)) || [];
   
-  const getPotentialMatchCount = (assignedRoles = [], hasVacancyParam) => {
+  const getPotentialMatchCount = (assignedRoles = []) => {
     try {
       // Return early if there's no vacancy
-      if (!hasVacancyParam) {
+      if (!hasVacancy) {
         return 0;
       }
       
