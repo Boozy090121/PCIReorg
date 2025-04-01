@@ -1751,51 +1751,22 @@
             const roles = useSelector(state => state.roles.roles[factory]);
             const personnel = useSelector(state => state.personnel.personnel[factory]);
             
+            // Dragging state
             const [isDragging, setIsDragging] = useState(false);
             const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
             const [matchingSuggestionsOpen, setMatchingSuggestionsOpen] = useState(false);
             
+            // Find assigned roles and personnel
             const assignedRoles = roles.filter(role => node.roles?.includes(role.id));
             const assignedPersonnel = personnel.filter(person => node.personnel?.includes(person.id));
+            
+            // Get the department of the node from the first assigned role (if any)
             const department = assignedRoles.length > 0 ? assignedRoles[0].department : '';
+            
+            // Determine if this node has a vacancy (no personnel assigned)
             const hasVacancy = assignedPersonnel.length === 0 && visualSettings.highlightVacancies;
             
-            const handleDelete = (e) => {
-                e.stopPropagation();
-                dispatch(deleteNode({ phase, factory, nodeId: node.id }));
-            };
-            
-            const handleMouseDown = (e) => {
-                if (e.target.closest('button')) return;
-                setIsDragging(true);
-                const rect = e.currentTarget.getBoundingClientRect();
-                setDragOffset({
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                });
-            };
-            
-            const handleMouseMove = (e) => {
-                if (!isDragging) return;
-                const container = document.getElementById('org-chart-container');
-                if (!container) return;
-                
-                const containerRect = container.getBoundingClientRect();
-                let newX = e.clientX - containerRect.left - dragOffset.x;
-                let newY = e.clientY - containerRect.top - dragOffset.y;
-                
-                dispatch(updateNode({
-                    phase,
-                    factory,
-                    node: { ...node, x: newX, y: newY }
-                }));
-            };
-            
-            const handleMouseUp = () => {
-                setIsDragging(false);
-            };
-            
-            // Personnel matching functionality
+            // Calculate vacancy details (if node has roles assigned but no personnel)
             const vacancyDetails = {
                 hasVacancy: assignedRoles.length > 0 && assignedPersonnel.length === 0,
                 roleCount: assignedRoles.length,
@@ -1805,6 +1776,7 @@
             function getPotentialMatchCount() {
                 if (!vacancyDetails.hasVacancy) return 0;
                 
+                // Extract all required skills from assigned roles
                 const requiredSkills = new Set();
                 assignedRoles.forEach(role => {
                     if (role.skills) {
@@ -1812,26 +1784,138 @@
                     }
                 });
                 
+                // Count personnel with at least one matching skill
                 if (requiredSkills.size === 0) return personnel.length;
                 
+                // Count unassigned personnel with at least one matching skill
                 return personnel.filter(person => {
                     if (node.personnel?.includes(person.id)) return false;
                     if (!person.skills || person.skills.length === 0) return false;
+                    
+                    // Check if any skills match
                     return person.skills.some(skill => requiredSkills.has(skill));
                 }).length;
             }
             
-            const handleAssignPersonnel = (personId) => {
-                dispatch(updateNode({
+            const handleDelete = (e) => {
+                e.stopPropagation();
+                dispatch(deleteNode({
                     phase,
                     factory,
-                    node: {
-                        ...node,
-                        personnel: [...(node.personnel || []), personId]
-                    }
+                    nodeId: node.id
                 }));
-                setMatchingSuggestionsOpen(false);
             };
+            
+            // Dragging handlers
+            const handleMouseDown = (e) => {
+                e.stopPropagation();
+                
+                // Only start drag on the node itself, not on buttons
+                if (e.target.closest('button')) {
+                    return;
+                }
+                
+                setIsDragging(true);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setDragOffset({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                });
+                
+                // Add event listeners to document for move and up events
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            };
+            
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                
+                // Find the container element
+                const container = document.getElementById('org-chart-container');
+                if (!container) return;
+                
+                const containerRect = container.getBoundingClientRect();
+                
+                // Calculate new position
+                let newX = e.clientX - containerRect.left - dragOffset.x;
+                let newY = e.clientY - containerRect.top - dragOffset.y;
+                
+                // Account for current zoom level and pan position
+                const zoomLevel = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[3]) || 1;
+                const panX = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[4]) || 0;
+                const panY = parseFloat(getComputedStyle(container.firstChild).transform.split(',')[5]) || 0;
+                
+                newX = (newX - panX) / zoomLevel;
+                newY = (newY - panY) / zoomLevel;
+                
+                // Ensure we don't go too far off-screen
+                newX = Math.max(newX, -200);
+                newY = Math.max(newY, -100);
+                
+                // Update node position in Redux
+                dispatch(updateNodePosition({
+                    phase,
+                    factory,
+                    nodeId: node.id,
+                    x: newX,
+                    y: newY
+                }));
+            };
+            
+            const handleMouseUp = () => {
+                if (!isDragging) return;
+                
+                setIsDragging(false);
+                
+                // Remove event listeners
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+            
+            // Get colors based on settings
+            const getNodeBorderColor = () => {
+                if (visualSettings.customColors && visualSettings.borderColor) {
+                    return visualSettings.borderColor;
+                }
+                
+                // Use the factory color if no custom color is specified
+                switch (factory) {
+                    case 'ADD':
+                        return '#CC2030';
+                    case 'BBV':
+                        return '#00518A';
+                    case 'SYN':
+                        return '#232323';
+                    default:
+                        return '#666666';
+                }
+            };
+            
+            // Get text color
+            const getTextColor = () => {
+                if (visualSettings.customColors) {
+                    return visualSettings.textColor;
+                }
+                return '#000000';
+            };
+            
+            // Get background color
+            const getBackgroundColor = () => {
+                if (hasVacancy) {
+                    return '#fff8e1'; // Light yellow for vacancies
+                }
+                
+                if (visualSettings.customColors) {
+                    return visualSettings.nodeColor;
+                }
+                
+                return '#ffffff';
+            };
+            
+            // Get node dimensions from settings
+            const nodeWidth = visualSettings.nodeWidth || 200;
+            const nodeHeight = visualSettings.nodeHeight || 120;
+            const nodeBorderWidth = visualSettings.nodeBorderWidth || 2;
             
             return (
                 <>
@@ -1842,48 +1926,62 @@
                             position: 'absolute',
                             top: node.y,
                             left: node.x,
-                            width: visualSettings.nodeWidth || 240,
-                            height: visualSettings.nodeHeight || 120,
+                            width: nodeWidth,
+                            height: nodeHeight,
                             transition: isDragging ? 'none' : 'all 0.2s',
                             overflow: 'hidden',
                             display: 'flex',
                             flexDirection: 'column',
-                            backgroundColor: hasVacancy ? '#fff8e1' : '#ffffff',
-                            border: `${visualSettings.nodeBorderWidth || 2}px solid ${factory === 'ADD' ? '#CC2030' : factory === 'BBV' ? '#00518A' : '#232323'}`,
-                            boxShadow: isHighlighted ? '0 0 0 2px #ff9800' : undefined,
-                            cursor: isDragging ? 'grabbing' : 'grab'
+                            backgroundColor: getBackgroundColor(),
+                            color: getTextColor(),
+                            border: `${nodeBorderWidth}px solid ${getNodeBorderColor()}`,
+                            boxShadow: isHighlighted ? '0 0 0 2px #ff9800, 0 4px 8px rgba(0,0,0,0.2)' : undefined,
+                            cursor: isDragging ? 'grabbing' : 'grab',
+                            zIndex: isDragging ? 1000 : 1
                         }}
                         onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
                     >
-                        <Box sx={{ p: 1 }}>
-                            <Typography variant="h6">{node.title}</Typography>
-                            <Typography variant="body2">{department}</Typography>
-                            
-                            {visualSettings.showRoles && (
-                                <Box sx={{ mt: 1 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                        <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>work_outline</span>
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
-                                            Roles
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {assignedRoles.map(role => (
-                                            <Chip 
-                                                key={role.id} 
-                                                label={role.title} 
-                                                size="small" 
-                                                sx={{ height: 20, fontSize: '0.675rem' }} 
-                                            />
-                                        ))}
-                                    </Box>
-                                </Box>
-                            )}
-                            
+                        <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'flex-start',
+                            p: 1,
+                            pb: 0
+                        }}>
+                            <Typography variant="h6" sx={{ 
+                                fontSize: '1rem', 
+                                fontWeight: 'bold',
+                                maxWidth: 'calc(100% - 60px)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                {node.title}
+                            </Typography>
+                            <Box>
+                                <IconButton size="small">
+                                    <span className="material-icons" style={{fontSize: '16px'}}>edit</span>
+                                </IconButton>
+                                <IconButton size="small" onClick={handleDelete}>
+                                    <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                                </IconButton>
+                            </Box>
+                        </Box>
+                        
+                        {visualSettings.showDepartments && department && (
+                            <Box sx={{ px: 1, display: 'flex', alignItems: 'center' }}>
+                                <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>business</span>
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                    {department}
+                                </Typography>
+                            </Box>
+                        )}
+                        
+                        <Divider sx={{ my: 0.5 }} />
+                        
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 1 }}>
                             {visualSettings.showPersonnel && (
-                                <Box sx={{ mt: 1 }}>
+                                <Box sx={{ mb: 1 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                             <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>person_outline</span>
@@ -1892,6 +1990,7 @@
                                             </Typography>
                                         </Box>
                                         
+                                        {/* Add the matching button if there are vacancies and roles assigned */}
                                         {vacancyDetails.hasVacancy && vacancyDetails.potentialMatches > 0 && (
                                             <Tooltip title="Find matching personnel">
                                                 <IconButton 
@@ -1915,41 +2014,137 @@
                                         )}
                                     </Box>
                                     
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {assignedPersonnel.map(person => (
-                                            <Chip 
-                                                key={person.id} 
-                                                label={person.name} 
-                                                size="small" 
-                                                sx={{ height: 20, fontSize: '0.675rem' }} 
-                                            />
-                                        ))}
-                                        {assignedPersonnel.length === 0 && (
-                                            <Typography variant="caption" color="text.secondary">
-                                                {vacancyDetails.hasVacancy ? 'Vacancy' : 'No personnel assigned'}
-                                            </Typography>
+                                    <Box
+                                        sx={{ 
+                                            minHeight: 24, 
+                                            backgroundColor: 'rgba(0,0,0,0.03)',
+                                            borderRadius: 1,
+                                            p: 0.5,
+                                            maxHeight: '40%',
+                                            overflow: 'auto'
+                                        }}
+                                    >
+                                        {assignedPersonnel.length > 0 ? (
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {assignedPersonnel.map(person => (
+                                                    <Tooltip key={person.id} title={person.currentRole || ''}>
+                                                        <Chip 
+                                                            label={person.name} 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                height: 20, 
+                                                                fontSize: '0.675rem', 
+                                                                '& .MuiChip-label': { p: '0 6px' } 
+                                                            }} 
+                                                        />
+                                                    </Tooltip>
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {vacancyDetails.hasVacancy ? (
+                                                    <Box 
+                                                        sx={{ 
+                                                            display: 'flex', 
+                                                            flexDirection: 'column', 
+                                                            alignItems: 'center',
+                                                            width: '100%' 
+                                                        }}
+                                                    >
+                                                        <Typography 
+                                                            variant="caption" 
+                                                            color="error" 
+                                                            sx={{ display: 'block', fontWeight: 'bold' }}
+                                                        >
+                                                            Vacancy
+                                                        </Typography>
+                                                        
+                                                        {vacancyDetails.potentialMatches > 0 && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="text"
+                                                                startIcon={<span className="material-icons" style={{fontSize: '14px'}}>person_add</span>}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setMatchingSuggestionsOpen(true);
+                                                                }}
+                                                                sx={{ 
+                                                                    fontSize: '0.7rem', 
+                                                                    p: 0, 
+                                                                    minWidth: 0, 
+                                                                    textTransform: 'none',
+                                                                    mt: 0.5
+                                                                }}
+                                                            >
+                                                                Find matches
+                                                            </Button>
+                                                        )}
+                                                    </Box>
+                                                ) : (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
+                                                        Drag personnel here
+                                                    </Typography>
+                                                )}
+                                            </Box>
                                         )}
                                     </Box>
                                 </Box>
                             )}
                             
-                            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                                <IconButton size="small" onClick={handleDelete}>
-                                    <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
-                                </IconButton>
-                            </Box>
+                            {visualSettings.showRoles && (
+                                <Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <span className="material-icons" style={{fontSize: '14px', marginRight: '4px', opacity: 0.6}}>work_outline</span>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
+                                            Roles
+                                        </Typography>
+                                    </Box>
+                                    
+                                    <Box
+                                        sx={{ 
+                                            minHeight: 24,
+                                            backgroundColor: 'rgba(0,0,0,0.03)',
+                                            borderRadius: 1,
+                                            p: 0.5,
+                                            maxHeight: '40%',
+                                            overflow: 'auto'
+                                        }}
+                                    >
+                                        {assignedRoles.length > 0 ? (
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                {assignedRoles.map(role => (
+                                                    <Tooltip key={role.id} title={role.department || ''}>
+                                                        <Chip 
+                                                            label={role.title} 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                height: 20, 
+                                                                fontSize: '0.675rem', 
+                                                                '& .MuiChip-label': { p: '0 6px' } 
+                                                            }} 
+                                                        />
+                                                    </Tooltip>
+                                                ))}
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', p: 0.5 }}>
+                                                Drag roles here
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
                         </Box>
                     </Paper>
                     
+                    {/* Personnel matching suggestions dialog */}
                     <Dialog
                         open={matchingSuggestionsOpen}
                         onClose={() => setMatchingSuggestionsOpen(false)}
                         maxWidth="sm"
                         fullWidth
                     >
-                        <DialogTitle>
-                            Personnel Matching Suggestions
-                        </DialogTitle>
+                        <DialogTitle>Personnel Matching Suggestions</DialogTitle>
                         <DialogContent>
                             <Typography variant="body2" paragraph>
                                 The following personnel match the required skills for this position:
@@ -1980,7 +2175,16 @@
                                                 <Button
                                                     size="small"
                                                     variant="outlined"
-                                                    onClick={() => handleAssignPersonnel(person.id)}
+                                                    onClick={() => {
+                                                        dispatch(updateNodePosition({
+                                                            phase,
+                                                            factory,
+                                                            nodeId: node.id,
+                                                            x: person.x,
+                                                            y: person.y
+                                                        }));
+                                                        setMatchingSuggestionsOpen(false);
+                                                    }}
                                                 >
                                                     Assign
                                                 </Button>
