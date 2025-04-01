@@ -454,9 +454,9 @@ const OrgChartContent = ({
   
   // Calculate layout dimensions
   const chartWidth = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal' 
-    ? '4000px' : '3000px';
+    ? '6000px' : '4000px';
   const chartHeight = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal'
-    ? '2500px' : '3000px';
+    ? '3000px' : '4000px';
   
   return (
     <Box
@@ -466,6 +466,8 @@ const OrgChartContent = ({
         height: chartHeight,
         width: chartWidth,
         position: 'relative',
+        minWidth: '1000px',
+        minHeight: '800px',
       }}
     >
       {/* SVG for connections */}
@@ -477,6 +479,7 @@ const OrgChartContent = ({
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
+          zIndex: 0,
         }}
       >
         <defs>
@@ -527,7 +530,8 @@ const OrgChartContent = ({
             borderRadius: 1,
             boxShadow: 3,
             width: 300,
-            textAlign: 'center'
+            textAlign: 'center',
+            zIndex: 3,
           }}
         >
           <h3>No Results Found</h3>
