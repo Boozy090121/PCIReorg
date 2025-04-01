@@ -12,17 +12,48 @@ function initializeFirebaseService() {
         let firestore;
         let app;
         let currentUser = null;
+        let isInitialized = false;
 
         // Initialize the Firebase service
         const init = () => {
             try {
-                // Get references to services from the initialized Firebase app
-                app = firebase.app();
-                auth = firebase.auth();
-                firestore = firebase.firestore();
+                console.log('Initializing Firebase service...');
+                
+                // Check if Firebase is available
+                if (typeof firebase === 'undefined') {
+                    console.error('Firebase SDK not loaded - firebase is undefined');
+                    throw new Error('Firebase SDK not loaded');
+                }
+
+                // Check if Firebase is properly initialized
+                try {
+                    app = firebase.app();
+                    console.log('Firebase app instance obtained successfully');
+                } catch (error) {
+                    console.error('Firebase app initialization error:', error);
+                    throw new Error('Firebase not properly initialized: ' + error.message);
+                }
+
+                // Get references to services
+                try {
+                    auth = firebase.auth();
+                    console.log('Firebase Auth service initialized');
+                } catch (error) {
+                    console.error('Firebase Auth initialization error:', error);
+                    throw error;
+                }
+
+                try {
+                    firestore = firebase.firestore();
+                    console.log('Firebase Firestore service initialized');
+                } catch (error) {
+                    console.error('Firebase Firestore initialization error:', error);
+                    throw error;
+                }
                 
                 // Set up auth state listener
                 auth.onAuthStateChanged(user => {
+                    console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
                     if (user) {
                         currentUser = {
                             id: user.uid,
@@ -37,26 +68,52 @@ function initializeFirebaseService() {
                             .then(doc => {
                                 if (doc.exists && doc.data().role === 'admin') {
                                     currentUser.role = 'admin';
+                                    console.log('User role updated to admin');
                                 }
                             })
-                            .catch(error => console.error("Error checking user role:", error));
+                            .catch(error => {
+                                console.error("Error checking user role:", error);
+                                // Don't throw here as this is not critical
+                            });
                     } else {
                         currentUser = null;
                     }
+                }, error => {
+                    console.error('Auth state change error:', error);
                 });
-                
+
+                isInitialized = true;
+                console.log('Firebase service initialized successfully');
                 return true;
             } catch (error) {
                 console.error("Error initializing Firebase service:", error);
+                console.error("Stack trace:", error.stack);
+                isInitialized = false;
                 return false;
+            }
+        };
+
+        // Helper function to check initialization
+        const checkInitialization = () => {
+            if (!isInitialized) {
+                console.error('Firebase services not initialized. Current state:', {
+                    isInitialized,
+                    hasApp: !!app,
+                    hasAuth: !!auth,
+                    hasFirestore: !!firestore
+                });
+                throw new Error('Firebase service not properly initialized');
             }
         };
 
         // Authentication functions
         const login = async (email, password) => {
             try {
+                console.log('Attempting login...');
+                checkInitialization();
                 const userCredential = await auth.signInWithEmailAndPassword(email, password);
                 const user = userCredential.user;
+                console.log('User successfully authenticated');
                 
                 currentUser = {
                     id: user.uid,
@@ -67,12 +124,15 @@ function initializeFirebaseService() {
                 };
                 
                 // Get user role from Firestore
+                console.log('Fetching user data from Firestore...');
                 const userDoc = await firestore.collection('users').doc(user.uid).get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
                     currentUser.name = userData.name || currentUser.name;
                     currentUser.role = userData.role || currentUser.role;
+                    console.log('User data retrieved from Firestore');
                 } else {
+                    console.log('Creating new user document in Firestore...');
                     // Create user document if it doesn't exist
                     await firestore.collection('users').doc(user.uid).set({
                         name: currentUser.name,
@@ -80,10 +140,13 @@ function initializeFirebaseService() {
                         role: currentUser.role,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
+                    console.log('New user document created in Firestore');
                 }
                 
                 return { success: true, user: currentUser };
             } catch (error) {
+                console.error('Login error:', error);
+                console.error('Stack trace:', error.stack);
                 return { success: false, message: error.message };
             }
         };

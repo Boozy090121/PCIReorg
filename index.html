@@ -265,9 +265,79 @@
 
     <!-- Initialize Firebase Service -->
     <script>
+        // Function to check if Firebase is loaded
+        function isFirebaseLoaded() {
+            const isLoaded = typeof firebase !== 'undefined' && firebase.app instanceof Function;
+            console.log('Firebase load check:', isLoaded ? 'Firebase is loaded' : 'Firebase is not loaded');
+            if (!isLoaded) {
+                console.log('Firebase state:', {
+                    isDefined: typeof firebase !== 'undefined',
+                    firebase: typeof firebase,
+                    hasApp: typeof firebase !== 'undefined' && firebase.app
+                });
+            }
+            return isLoaded;
+        }
+
+        // Function to initialize Firebase with retry
+        function initializeFirebaseWithRetry(maxRetries = 5, delay = 1000) {
+            let retries = 0;
+
+            function tryInitialize() {
+                console.log(`Attempting Firebase initialization (attempt ${retries + 1}/${maxRetries})`);
+                if (isFirebaseLoaded()) {
+                    try {
+                        // Initialize Firebase if not already initialized
+                        if (!firebase.apps.length) {
+                            console.log('Initializing new Firebase app with config:', {
+                                projectId: firebaseConfig.projectId,
+                                authDomain: firebaseConfig.authDomain
+                            });
+                            firebase.initializeApp(firebaseConfig);
+                            firebase.analytics();
+                        } else {
+                            console.log('Firebase app already initialized');
+                        }
+                        // Initialize our Firebase service
+                        window.initializeFirebaseService();
+                        console.log('Firebase successfully initialized');
+                    } catch (error) {
+                        console.error('Error initializing Firebase:', error);
+                        console.error('Stack trace:', error.stack);
+                        // If this was the last retry, show a more detailed error
+                        if (retries >= maxRetries - 1) {
+                            console.error('Firebase initialization failed after all retries. Current state:', {
+                                firebaseLoaded: isFirebaseLoaded(),
+                                apps: firebase?.apps?.length,
+                                hasAuth: typeof firebase?.auth === 'function',
+                                hasFirestore: typeof firebase?.firestore === 'function',
+                                hasAnalytics: typeof firebase?.analytics === 'function'
+                            });
+                        }
+                    }
+                } else {
+                    retries++;
+                    if (retries < maxRetries) {
+                        console.log(`Firebase not loaded yet, retrying in ${delay}ms... (${retries}/${maxRetries})`);
+                        setTimeout(tryInitialize, delay);
+                    } else {
+                        console.error('Failed to initialize Firebase after maximum retries');
+                        console.error('Final Firebase state:', {
+                            isDefined: typeof firebase !== 'undefined',
+                            firebase: typeof firebase,
+                            hasApp: typeof firebase !== 'undefined' && firebase.app
+                        });
+                    }
+                }
+            }
+
+            // Start initialization process
+            tryInitialize();
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Firebase Service
-            window.initializeFirebaseService();
+            console.log('DOM Content Loaded - Starting Firebase initialization');
+            initializeFirebaseWithRetry();
         });
     </script>
 
