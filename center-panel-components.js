@@ -454,9 +454,9 @@ const OrgChartContent = ({
   
   // Calculate layout dimensions
   const chartWidth = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal' 
-    ? '8000px' : '6000px';
+    ? '12000px' : '8000px';
   const chartHeight = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal'
-    ? '4000px' : '6000px';
+    ? '6000px' : '8000px';
   
   return (
     <Box
@@ -466,11 +466,11 @@ const OrgChartContent = ({
         height: chartHeight,
         width: chartWidth,
         position: 'relative',
-        minWidth: '1200px',
-        minHeight: '800px',
+        minWidth: '2000px',
+        minHeight: '1200px',
         transition: 'transform 0.2s ease',
         backgroundColor: '#ffffff',
-        padding: '40px',
+        padding: '60px',
         boxSizing: 'border-box'
       }}
     >
