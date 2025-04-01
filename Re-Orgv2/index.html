@@ -9,8 +9,6 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <!-- Material UI CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/dist/mui-material.min.css">
-    <!-- React Beautiful DND -->
-    <script src="https://cdn.jsdelivr.net/npm/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js"></script>
     <!-- Custom styles -->
     <style>
         body {
@@ -241,46 +239,52 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-analytics.js"></script>
 
-    <!-- Firebase Configuration -->
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyB8v5Jwcc-73i3-CuZ70BH1EW_LsWuVs0Q",
-            authDomain: "reorg-cfa43.firebaseapp.com",
-            projectId: "reorg-cfa43",
-            storageBucket: "reorg-cfa43.firebasestorage.app",
-            messagingSenderId: "754287455974",
-            appId: "1:754287455974:web:fd00416f1ede3044db5527",
-            measurementId: "G-J9WN5L29Q7"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        firebase.analytics();
-    </script>
-
-    <!-- Firebase Service -->
-    <script src="firebase-service.js"></script>
-</head>
-<body>
-    <div id="root"></div>
-
     <!-- Library Imports -->
     <!-- React and ReactDOM -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
     <!-- Babel for JSX -->
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Redux and Redux Toolkit -->
-    <script src="https://cdn.jsdelivr.net/npm/redux@4.2.1/dist/redux.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-redux@8.1.2/dist/react-redux.min.js"></script>
+    <!-- Redux and React-Redux -->
+    <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js"></script>
+    <script src="https://unpkg.com/react-redux@8.1.2/dist/react-redux.min.js"></script>
     
     <!-- Material UI -->
-    <script src="https://cdn.jsdelivr.net/npm/@mui/material@5.15.3/umd/material-ui.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+    <script src="https://unpkg.com/@mui/material@5.15.3/umd/material-ui.production.min.js"></script>
+    <script src="https://unpkg.com/@emotion/react@11.11.1/dist/emotion-react.umd.min.js"></script>
+    <script src="https://unpkg.com/@emotion/styled@11.11.0/dist/emotion-styled.umd.min.js"></script>
+
+    <!-- React Beautiful DnD -->
+    <script src="https://cdn.jsdelivr.net/npm/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.min.js" integrity="sha256-qQDRxqGqTMNh5hGv9K+E8Qv1e5e/tZb0PBBBvR0BQCU=" crossorigin="anonymous"></script>
+
+    <!-- Fallback for react-beautiful-dnd -->
+    <script>
+        // Check if the library loaded correctly
+        if (!window.ReactBeautifulDnd) {
+            console.log('Loading fallback for react-beautiful-dnd...');
+            const fallbackScript = document.createElement('script');
+            fallbackScript.src = 'https://unpkg.com/react-beautiful-dnd@13.1.1/dist/react-beautiful-dnd.js';
+            document.head.appendChild(fallbackScript);
+        }
+    </script>
+
+    <!-- Initialize global variables -->
+    <script>
+        // Wait for the library to be available
+        function waitForReactBeautifulDnd(callback) {
+            if (window.ReactBeautifulDnd) {
+                callback();
+            } else {
+                setTimeout(() => waitForReactBeautifulDnd(callback), 100);
+            }
+        }
+
+        waitForReactBeautifulDnd(() => {
+            window.DndComponents = window.ReactBeautifulDnd;
+        });
+    </script>
 
     <!-- Redux Toolkit Implementation -->
     <script>
