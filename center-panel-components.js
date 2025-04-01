@@ -454,20 +454,24 @@ const OrgChartContent = ({
   
   // Calculate layout dimensions
   const chartWidth = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal' 
-    ? '6000px' : '4000px';
+    ? '8000px' : '6000px';
   const chartHeight = visualSettings.layout === 'horizontal' || visualSettings.direction === 'horizontal'
-    ? '3000px' : '4000px';
+    ? '4000px' : '6000px';
   
   return (
     <Box
       sx={{
         transform: `scale(${zoom})`,
-        transformOrigin: 'top left',
+        transformOrigin: '0 0',
         height: chartHeight,
         width: chartWidth,
         position: 'relative',
-        minWidth: '1000px',
+        minWidth: '1200px',
         minHeight: '800px',
+        transition: 'transform 0.2s ease',
+        backgroundColor: '#ffffff',
+        padding: '40px',
+        boxSizing: 'border-box'
       }}
     >
       {/* SVG for connections */}

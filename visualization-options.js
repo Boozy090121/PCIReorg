@@ -39,22 +39,22 @@ const VisualizationOptions = ({
   
   // Initialize state with current settings or defaults
   const [settings, setSettings] = useState({
-    layout: currentSettings?.layout || 'hierarchical',
-    direction: currentSettings?.direction || 'vertical',
-    nodeSpacing: currentSettings?.nodeSpacing || 60,
-    levelSpacing: currentSettings?.levelSpacing || 100,
-    showRoles: currentSettings?.showRoles ?? true,
-    showPersonnel: currentSettings?.showPersonnel ?? true,
-    showDepartments: currentSettings?.showDepartments ?? false,
-    highlightVacancies: currentSettings?.highlightVacancies ?? true,
-    nodeBorderWidth: currentSettings?.nodeBorderWidth || 2,
-    nodeWidth: currentSettings?.nodeWidth || 220,
-    nodeHeight: currentSettings?.nodeHeight || 120,
-    connectionStyle: currentSettings?.connectionStyle || 'straight',
-    customColors: currentSettings?.customColors || false,
-    nodeColor: currentSettings?.nodeColor || '#ffffff',
-    textColor: currentSettings?.textColor || '#000000',
-    borderColor: currentSettings?.borderColor || '',
+    layout: 'hierarchical',
+    direction: 'vertical',
+    nodeSpacing: 120,
+    levelSpacing: 180,
+    showRoles: true,
+    showPersonnel: true,
+    showDepartments: false,
+    highlightVacancies: true,
+    nodeBorderWidth: 2,
+    nodeWidth: 280,
+    nodeHeight: 160,
+    connectionStyle: 'straight',
+    customColors: false,
+    nodeColor: '#ffffff',
+    textColor: '#000000',
+    borderColor: '',
   });
 
   const handleChange = (event) => {
