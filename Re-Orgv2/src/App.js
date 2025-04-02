@@ -11,6 +11,7 @@ import ReportsAndAnalytics from './components/ReportsAndAnalytics/ReportsAndAnal
 import StateComparisonTool from './components/PhaseManager/StateComparisonTool';
 import PersistenceManager from './components/Persistence/PersistenceManager';
 import DashboardAnalytics from './components/Dashboard/DashboardAnalytics';
+import TestComponent from './components/TestComponent';
 
 function App() {
   const [currentTab, setCurrentTab] = useState(0);
@@ -22,6 +23,7 @@ function App() {
   return (
     <Box className="app-container">
       <AppHeader />
+      <TestComponent />
       <Box sx={{ display: 'flex', padding: 2, gap: 2 }}>
         <FocusFactorySelector />
         <PhaseManager />
