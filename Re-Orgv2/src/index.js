@@ -1,21 +1,17 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { Provider } from 'react-redux';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import { createRoot } from 'react-dom/client';
 import App from './App';
-import { store } from './app/store';
-import theme from './styles/theme';
-import './styles/globals.css';
+import { initializeFirebase } from './services/firebase';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+// Initialize Firebase
+initializeFirebase();
+
+// Create root
+const root = createRoot(document.getElementById('root'));
+
+// Render app
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <App />
-      </ThemeProvider>
-    </Provider>
+    <App />
   </React.StrictMode>
 ); 
